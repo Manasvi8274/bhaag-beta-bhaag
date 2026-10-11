@@ -23,6 +23,16 @@ def extract(text):
     return max(blocks, key=len) if blocks else text
 
 
+def fix_exports(code, test_src, out_name):
+    """Qwen often forgets `export`; add it to names the test imports from this module."""
+    for names in re.findall(r"import\s*\{([^}]*)\}\s*from\s*['\"][./]*src/" + re.escape(out_name) + "['\"]", test_src):
+        for n in [x.strip() for x in names.split(",") if x.strip()]:
+            if re.search(r"export\s+(?:async\s+)?(?:function|const|let|class)\s+" + n + r"\b", code) or re.search(r"export\s*\{[^}]*\b" + n + r"\b", code):
+                continue
+            code = re.sub(r"^(\s*)((?:async\s+)?(?:function|const|let|class)\s+" + n + r"\b)", r"\1export \2", code, count=1, flags=re.M)
+    return code
+
+
 def check(out, test):
     for cmd in (["node", "--check", str(out)], ["node", "--test", str(test)] if test else None):
         if not cmd:
@@ -55,7 +65,7 @@ def main():
         for i in range(1, a.iters + 1):
             model = SMALL if i <= 3 else BIG
             t = time.time()
-            code = extract(ask(model, prompt))
+            code = fix_exports(extract(ask(model, prompt)), test_src, out.name)
             out.write_text(code, encoding="utf-8")
             err = check(out, a.test)
             L.write(f"\n===== iter {i} {model} {time.time()-t:.0f}s =====\n{code}\n--- result ---\n{err or 'PASS'}\n")

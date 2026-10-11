@@ -1,0 +1,24 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#ff006e">
+  <title>Bhaag Beta Bhaag!</title>
+  <link rel="manifest" href="manifest.webmanifest">
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    html, body { margin: 0; height: 100%; overflow: hidden; background: #9bd4ff; touch-action: none; user-select: none; -webkit-user-select: none; }
+    canvas { display: block; width: 100vw; height: 100vh; }
+    #ui { position: fixed; inset: 0; pointer-events: none; }
+  </style>
+</head>
+<body>
+  <canvas id="game"></canvas>
+  <div id="ui"></div>
+  <script type="module">
+    import { startGame } from './src/game.js';
+    startGame(document.getElementById('game'), document.getElementById('ui'));
+  </script>
+</body>
+</html>
