@@ -21,3 +21,6 @@ Export exactly:
 3. `firstHit(player, obstacles)`: checks an array of obstacles in order and returns
    `{ result, obstacle }` for the most severe hit ('caught' beats 'stumble'). If nothing is hit return
    `{ result: 'none', obstacle: null }`. Among equal severity return the first one in the array.
+   ALGORITHM for firstHit (follow exactly): `const rank = { none: 0, stumble: 1, caught: 2 };`
+   Loop over obstacles; compute hit = classifyHit(player, o); replace the current best ONLY when
+   `rank[hit] > rank[best.result]` (strictly greater, so an equal later hit never replaces an earlier one).
