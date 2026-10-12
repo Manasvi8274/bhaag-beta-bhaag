@@ -5,7 +5,6 @@
   "type": "module",
   "scripts": {
     "test": "node --test tests/",
-    "serve": "python tools/serve.py 8123",
     "build": "node tools/build.mjs",
     "android": "node tools/build.mjs && npx cap sync android && npx cap open android"
   },

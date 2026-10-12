@@ -11,7 +11,7 @@ import { createInput } from './input.js';
 import { createUI } from './ui.js';
 import { createAudio } from './audio.js';
 import { createFx } from './fx.js';
-import { createAds } from './ads.js';
+import { createAds, createWebAds } from './ads.js';
 import { createProgress, SKINS } from './progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL, POWERUP_TIME } from './powerups.js';
 
@@ -56,6 +56,7 @@ export function startGame(canvas, uiRoot) {
   const progress = createProgress(storage);
   const audio = createAudio();
   let ads = createAds();
+  if (!ads.available) ads = createWebAds(); // PWA / browser
   audio.setMuted(progress.data.muted);
   const applySkin = () => { const s = SKINS[progress.data.skin]; beta.setColors(s.cap, s.bag); };
   applySkin();

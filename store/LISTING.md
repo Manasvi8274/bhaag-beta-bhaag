@@ -58,7 +58,7 @@ v1.1
 ## Graphics checklist
 - [x] App icon 512×512 — `icons/icon-512.png`
 - [x] Feature graphic 1024×500 — `store/feature-graphic.png`
-- [x] Phone screenshots 1080×1920 — `store/screenshots/` (regenerate: `tools/shots.html?scene=menu|run|papa|caught&t=secs`, headless Chrome 540×960 at device scale 2)
+- [x] Phone screenshots 1080×1920 — `store/screenshots/`
 
 ## Release steps (one-time setup)
 1. Install **Android Studio** (it includes the Android SDK and the JDK it needs).
