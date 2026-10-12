@@ -1,6 +1,6 @@
 <!doctype html>
 <!-- Renders the app icon. tools/make-icons.sh screenshots it at each size. ?s=512 -->
-<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<html><head><meta charset="utf-8"><link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@800&display=block" rel="stylesheet"><style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
 <body><canvas id="c"></canvas>
 <script>
 // ?s=512 square icon | ?w=1080&h=1920&k=0.45 splash/adaptive (k = content size as fraction of the short side)
@@ -17,9 +17,9 @@ g.fillStyle = bg; g.fillRect(0, 0, W, H);
 g.fillStyle = 'rgba(255,255,255,0.18)';
 for (let i = 0; i < 12; i++) { g.save(); g.translate(W * 0.45, H * 0.5); g.rotate(i * Math.PI / 6); g.beginPath(); g.moveTo(0, 0); g.lineTo(R, -R * 0.1); g.lineTo(R, R * 0.1); g.fill(); g.restore(); }
 
-// content is designed on a 512 square, scaled into the centre
-const side = Math.min(W, H) * K;
-g.translate((W - side) / 2, (H - side) / 2); g.scale(side / 512, side / 512);
+// content is designed on a 512 square, scaled into the centre (or the left third with ?title=1)
+const side = Math.min(W, H) * K, TITLE = q.has('title');
+g.translate(TITLE ? W * 0.05 : (W - side) / 2, (H - side) / 2); g.scale(side / 512, side / 512);
 
 // stickman running right (content kept inside the 80% safe zone)
 const line = (pts, w = 30) => { g.beginPath(); g.moveTo(...pts[0]); for (const p of pts.slice(1)) g.lineTo(...p); g.lineWidth = w; g.lineCap = g.lineJoin = 'round'; g.strokeStyle = '#151515'; g.stroke(); };
@@ -43,4 +43,18 @@ g.strokeStyle = '#ffd60a'; g.lineWidth = 10; g.beginPath(); g.moveTo(-22, -10); 
 g.restore();
 g.strokeStyle = '#fff'; g.lineWidth = 9; g.lineCap = 'round';
 for (const [x, y, l] of [[425, 175, 50], [440, 145, 40], [410, 200, 34]]) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + l, y + l * 0.55); g.stroke(); }
+
+// Store feature graphic: game title on the right
+if (TITLE) document.fonts.load('800 100px "Baloo 2"').then(() => {
+  g.setTransform(1, 0, 0, 1, 0, 0);
+  g.textAlign = 'center'; g.lineJoin = 'round';
+  const cx = W * 0.69;
+  const text = (t, y, size, fill, rot) => {
+    g.save(); g.translate(cx, y); g.rotate(rot); g.font = `800 ${size}px "Baloo 2", sans-serif`;
+    g.lineWidth = size * 0.16; g.strokeStyle = '#1b1b1b'; g.strokeText(t, 0, 0); g.fillStyle = fill; g.fillText(t, 0, 0); g.restore();
+  };
+  text('Bhaag Beta', H * 0.40, H * 0.2, '#ffd60a', -0.05);
+  text('Bhaag!', H * 0.63, H * 0.22, '#ff006e', -0.05);
+  text('Papa is coming with the chappal!', H * 0.82, H * 0.07, '#ffffff', -0.02);
+});
 </script></body></html>

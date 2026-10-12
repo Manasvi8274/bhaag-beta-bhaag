@@ -32,21 +32,29 @@ remote; Papa chases him through Indian streets with a chappal. Target: PWA + And
 |---|---|---|
 | src/config.js | all tunable constants | yes |
 | src/player.js | lane/jump/slide state machine | yes |
-| src/input.js | keyboard + swipe -> actions | DOM |
 | src/collision.js | AABB tests, obstacle hit classification | yes |
-| src/spawner.js | obstacle/coin pattern generation (seeded RNG) | yes |
+| src/spawner.js | obstacle/coin/power-up rows (seeded RNG) | yes |
 | src/chaser.js | Papa distance / stumble / caught logic | yes |
+| src/powerups.js | timed power-ups | yes |
+| src/progress.js | save data: wallet, best, missions, skins, daily reward, settings | yes (storage injected) |
+| src/audio.js | procedural WebAudio SFX + dhol loop | no-op without WebAudio |
+| src/input.js | keyboard + swipe -> actions | DOM |
 | src/stickman.js | stickman mesh + procedural animation | THREE |
+| src/props.js | obstacle / coin / power-up models (cached, cloned) | THREE |
 | src/world.js | street segments, buildings, recycling | THREE |
-| src/game.js | ties everything, main loop | THREE |
-| src/ui.js | HUD + menus (DOM) | DOM |
+| src/fx.js | pooled particles | THREE |
+| src/ui.js | all screens (DOM) | DOM |
+| src/game.js | ties everything, main loop, adaptive quality, back button | THREE |
 
-## Roadmap to a sellable release
-1. Playable core: run, lanes, jump, slide, obstacles, coins, Papa chase, caught scene, menus. (in progress)
-2. Juice: camera shake, dust particles, coin pickup sparkle + sound, speed lines, screen flash on stumble.
-3. Audio: procedural WebAudio SFX (jump, slide, coin, stumble, chappal smack), looping dhol-style beat, mute toggle.
-4. Power-ups: Mummy's shield (one free hit), Dadi's ladoo magnet (pull coins), cycle (5 s invincible speed), doodh glass super-jump.
-5. Variety: zones (gali -> sabzi mandi -> school road), day/evening lighting, ramps + ride on bus roofs, rotating banners.
-6. Meta: missions (collect 100 coins, slide 10 times), coin shop (outfits/caps for Beta, chappal skins for Papa), daily reward.
-7. Polish: pause menu, settings (sound, vibration via navigator.vibrate), tutorial on first run, loading screen.
-8. Store: PWA manifest + service worker (offline), icons, Capacitor Android build, privacy policy page, store listing + screenshots.
+## Dev
+- `npm test` — 58 unit tests. `npm run serve` — no-cache server on :8123.
+- `#play` skips the menu; `#debug` exposes `window.bbb` (frame stepper) for automated checks.
+- `sh tools/make-icons.sh` regenerates icons/splashes (server must be running). `npm run android` builds + opens Android Studio.
+- Store assets and release steps: `store/LISTING.md`.
+
+## Roadmap status
+1. Core — done. 2. Juice — done (particles, shake, speed FOV, flash, vibration). 3. Audio — done.
+4. Power-ups — done (shield, magnet, doodh jump, double coins). 5. Variety — day/sunset/dusk cycle done; ramps/bus roofs, zones: later.
+6. Meta — done (missions + multiplier, shop skins, daily reward, coin revive). 7. Polish — done (pause, auto-pause, settings, tutorial hints, loading screen).
+8. Store — PWA + Android project + icons + privacy + listing done; needs Android Studio build + phone screenshots.
+Later ideas: rewarded ad for revive (AdMob), bus-roof running, more zones, Papa skins, leaderboard.

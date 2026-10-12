@@ -394,11 +394,29 @@ export function startGame(canvas, uiRoot) {
     renderer.render(scene, camera);
   }
 
+  // Adaptive quality: if the phone averages under ~45 fps for 3 s, step down (sharpness, then shadows).
+  let perfT = 0, perfFrames = 0, quality = 2;
+  function watchPerf(rawDt) {
+    perfT += rawDt; perfFrames += 1;
+    if (perfT < 3) return;
+    const slow = perfT / perfFrames > 1 / 45;
+    perfT = 0; perfFrames = 0;
+    if (!slow || quality === 0) return;
+    quality -= 1;
+    if (quality === 1) renderer.setPixelRatio(1);
+    else { renderer.shadowMap.type = THREE.BasicShadowMap; sun.shadow.mapSize.set(512, 512); sun.shadow.map?.dispose(); sun.shadow.map = null; }
+    resize();
+  }
+
   const clock = new THREE.Clock();
   goMenu();
   const daily = progress.dailyStatus(today());
   if (daily.available) ui.showDaily(daily.streak, daily.reward);
-  renderer.setAnimationLoop(() => frame(Math.min(clock.getDelta(), 1 / 30)));
+  renderer.setAnimationLoop(() => {
+    const raw = clock.getDelta();
+    if (state === 'playing' && raw < 0.5) watchPerf(raw); // ignore tab-switch gaps
+    frame(Math.min(raw, 1 / 30));
+  });
 
   // Dev hooks: #play skips the menu, #debug exposes a stepper for automated checks.
   if (location.hash.includes('play')) begin();
