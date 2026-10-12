@@ -1,0 +1,45 @@
+# On every push to master: test, publish the web game to GitHub Pages, build the Android APK into the "latest" release.
+name: deploy
+on:
+  push:
+    branches: [master]
+  workflow_dispatch:
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+concurrency: { group: deploy, cancel-in-progress: true }
+
+jobs:
+  web:
+    runs-on: ubuntu-latest
+    environment: { name: github-pages, url: '${{ steps.pages.outputs.page_url }}' }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm test
+      - run: node tools/build.mjs
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with: { path: www }
+      - id: pages
+        uses: actions/deploy-pages@v4
+
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20, cache: npm }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 21, cache: gradle }
+      - run: npm ci && node tools/build.mjs && npx cap sync android
+      # ponytail: debug-signed APK for sideloading; Play Store needs the signed AAB from Android Studio
+      - run: cd android && ./gradlew assembleDebug --no-daemon
+      - run: cp android/app/build/outputs/apk/debug/app-debug.apk BhaagBetaBhaag.apk
+      - env: { GH_TOKEN: '${{ github.token }}' }
+        run: |
+          gh release delete latest --yes --cleanup-tag || true
+          gh release create latest BhaagBetaBhaag.apk --title "Bhaag Beta Bhaag! (latest build)" \
+            --notes "Android APK built from ${GITHUB_SHA::7}. Download on your phone, open it and allow 'Install unknown apps'. Ads are Google test ads."
