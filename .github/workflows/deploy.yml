@@ -54,6 +54,8 @@ jobs:
           fi
       - env: { GH_TOKEN: '${{ github.token }}' }
         run: |
-          gh release delete latest --yes --cleanup-tag || true
-          gh release create latest BhaagBetaBhaag.apk $(ls BhaagBetaBhaag.aab 2>/dev/null) --title "Bhaag Beta Bhaag! (latest build)" \
-            --notes "Build ${{ github.run_number }} from ${GITHUB_SHA::7}. BhaagBetaBhaag.aab = upload to Play Console. BhaagBetaBhaag.apk = install on a phone: Download on your phone, open it and allow 'Install unknown apps'. Uses live AdMob ads: never tap your own ads (register your phone as an AdMob test device)."
+          # update in place (no delete/recreate, which can fail half-way and leave no download)
+          NOTES="Build ${{ github.run_number }} from ${GITHUB_SHA::7}. BhaagBetaBhaag.aab = upload to Play Console. BhaagBetaBhaag.apk = install on a phone: Download on your phone, open it and allow 'Install unknown apps'. Uses live AdMob ads: never tap your own ads (register your phone as an AdMob test device)."
+          gh release view latest >/dev/null 2>&1 || gh release create latest --title "Bhaag Beta Bhaag! (latest build)" --notes "$NOTES"
+          gh release edit latest --notes "$NOTES"
+          gh release upload latest BhaagBetaBhaag.apk $(ls BhaagBetaBhaag.aab 2>/dev/null) --clobber
