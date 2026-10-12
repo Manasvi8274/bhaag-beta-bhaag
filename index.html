@@ -4,21 +4,42 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
   <meta name="theme-color" content="#ff006e">
+  <meta name="description" content="Beta broke the TV remote. Papa has a chappal. RUN! A free endless runner through colourful Indian streets.">
   <title>Bhaag Beta Bhaag!</title>
   <link rel="manifest" href="manifest.webmanifest">
+  <link rel="icon" href="icons/icon-192.png">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
   <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@700;800&display=swap" rel="stylesheet">
   <style>
     html, body { margin: 0; height: 100%; overflow: hidden; background: #9bd4ff; touch-action: none; user-select: none; -webkit-user-select: none; }
     canvas { display: block; width: 100vw; height: 100vh; }
     #ui { position: fixed; inset: 0; pointer-events: none; }
+    #loading { position: fixed; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px;
+      background: radial-gradient(circle at 45% 45%, #ffe45c, #ff7b00); font: 800 34px 'Baloo 2', 'Trebuchet MS', sans-serif;
+      color: #ffd60a; text-shadow: 3px 0 #1b1b1b, -3px 0 #1b1b1b, 0 3px #1b1b1b, 0 -3px #1b1b1b; text-align: center; transition: opacity .4s; }
+    #loading img { width: 120px; height: 120px; border-radius: 26px; border: 4px solid #1b1b1b; animation: bob .6s ease-in-out infinite alternate; }
+    #loading small { font-size: 18px; color: #fff; }
+    @keyframes bob { to { transform: translateY(-12px) rotate(-4deg); } }
   </style>
 </head>
 <body>
   <canvas id="game"></canvas>
   <div id="ui"></div>
+  <div id="loading"><img src="icons/icon-192.png" alt=""><div>Bhaag Beta Bhaag!</div><small>Papa is putting on his chappal...</small></div>
   <script type="module">
-    import { startGame } from './src/game.js';
-    startGame(document.getElementById('game'), document.getElementById('ui'));
+    const loading = document.getElementById('loading');
+    try {
+      const { startGame } = await import('./src/game.js');
+      startGame(document.getElementById('game'), document.getElementById('ui'));
+      loading.style.opacity = '0';
+      setTimeout(() => loading.remove(), 450);
+    } catch (err) {
+      console.error(err);
+      loading.lastElementChild.textContent = 'Sorry! This device could not start the game (WebGL is needed). Try updating your browser.';
+    }
+    // Offline play for the web version (the Android app ships its files already; dev on localhost skips it).
+    const local = ['localhost', '127.0.0.1'].includes(location.hostname) && !location.search.includes('sw');
+    if ('serviceWorker' in navigator && !window.Capacitor && !local) navigator.serviceWorker.register('sw.js').catch(() => {});
   </script>
 </body>
 </html>

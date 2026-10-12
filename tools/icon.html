@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- Renders the app icon. tools/make-icons.sh screenshots it at each size. ?s=512 -->
+<html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
+<body><canvas id="c"></canvas>
+<script>
+const S = Number(new URLSearchParams(location.search).get('s') || 512);
+const c = document.getElementById('c'); c.width = c.height = S;
+const g = c.getContext('2d'); g.scale(S / 512, S / 512);
+
+// background: sunny gradient + speed rays (full bleed so it works as a maskable icon)
+const bg = g.createRadialGradient(220, 230, 40, 256, 256, 380);
+bg.addColorStop(0, '#ffe45c'); bg.addColorStop(1, '#ff7b00');
+g.fillStyle = bg; g.fillRect(0, 0, 512, 512);
+g.fillStyle = 'rgba(255,255,255,0.18)';
+for (let i = 0; i < 12; i++) { g.save(); g.translate(230, 260); g.rotate(i * Math.PI / 6); g.beginPath(); g.moveTo(0, 0); g.lineTo(400, -40); g.lineTo(400, 40); g.fill(); g.restore(); }
+
+// stickman running right (content kept inside the 80% safe zone)
+const line = (pts, w = 30) => { g.beginPath(); g.moveTo(...pts[0]); for (const p of pts.slice(1)) g.lineTo(...p); g.lineWidth = w; g.lineCap = g.lineJoin = 'round'; g.strokeStyle = '#151515'; g.stroke(); };
+g.fillStyle = '#1d4ed8'; g.save(); g.translate(190, 250); g.rotate(-0.25); g.fillRect(-36, -50, 46, 78); g.strokeStyle = '#151515'; g.lineWidth = 8; g.strokeRect(-36, -50, 46, 78); g.restore(); // school bag
+line([[235, 200], [205, 300]], 34);                       // torso
+line([[205, 300], [270, 340], [250, 410]]);               // front leg
+line([[205, 300], [160, 350], [105, 345]]);               // back leg
+line([[228, 225], [285, 255], [320, 215]]);               // front arm
+line([[228, 225], [175, 245], [150, 205]]);               // back arm
+g.fillStyle = '#151515'; g.beginPath(); g.arc(250, 160, 44, 0, Math.PI * 2); g.fill(); // head
+g.fillStyle = '#fff'; for (const x of [262, 280]) { g.beginPath(); g.arc(x, 158, 7, 0, Math.PI * 2); g.fill(); }
+g.fillStyle = '#d62828'; g.beginPath(); g.arc(250, 150, 46, Math.PI, 0); g.fill();   // cap
+g.fillRect(250, 142, 66, 12);                                                        // brim
+g.fillStyle = '#d62828'; g.fillRect(222, 215, 12, 50);                               // tie
+
+// flying chappal with motion lines
+g.save(); g.translate(385, 120); g.rotate(0.5);
+g.fillStyle = '#7a4a21'; g.beginPath(); g.ellipse(0, 0, 30, 62, 0, 0, Math.PI * 2); g.fill();
+g.strokeStyle = '#151515'; g.lineWidth = 8; g.stroke();
+g.strokeStyle = '#ffd60a'; g.lineWidth = 10; g.beginPath(); g.moveTo(-22, -10); g.lineTo(0, -32); g.lineTo(22, -10); g.stroke();
+g.restore();
+g.strokeStyle = '#fff'; g.lineWidth = 9; g.lineCap = 'round';
+for (const [x, y, l] of [[425, 175, 50], [440, 145, 40], [410, 200, 34]]) { g.beginPath(); g.moveTo(x, y); g.lineTo(x + l, y + l * 0.55); g.stroke(); }
+</script></body></html>

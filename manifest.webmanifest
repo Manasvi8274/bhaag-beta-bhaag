@@ -1,0 +1,17 @@
+{
+  "name": "Bhaag Beta Bhaag!",
+  "short_name": "Bhaag Beta",
+  "description": "Beta broke the TV remote. Papa has a chappal. RUN! An endless runner through Indian streets.",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "fullscreen",
+  "orientation": "portrait",
+  "background_color": "#ff7b00",
+  "theme_color": "#ff006e",
+  "categories": ["games"],
+  "icons": [
+    { "src": "icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
