@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createProgress, SKINS, DAILY_REWARDS } from '../src/progress.js';
+import { createProgress, SKINS, DAILY_REWARDS, UPGRADE_COST } from '../src/progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive } from '../src/powerups.js';
 
 const mem = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v) }; };
@@ -77,4 +77,23 @@ test('power-ups time out, shield can be consumed', () => {
   assert.equal(consume(pu, 'shield'), false);
   activate(pu, 'jump'); updatePowerups(pu, 3); activate(pu, 'jump');
   assert.equal(listActive(pu)[0].frac, 1, 'picking again refreshes');
+  activate(pu, 'double', 24); updatePowerups(pu, 12);
+  assert.equal(listActive(pu).find((x) => x.name === 'double').frac, 0.5, 'upgraded duration');
+});
+
+test('power-up upgrades: cost coins, +25% duration each, max 5, saved', () => {
+  const store = mem();
+  const p = createProgress(store);
+  assert.equal(p.upgrade('magnet'), false, 'no coins');
+  p.addCoins(10000);
+  assert.equal(p.upgradeCost('magnet'), UPGRADE_COST[0]);
+  for (let i = 0; i < 5; i++) assert.equal(p.upgrade('magnet'), true);
+  assert.equal(p.upgrade('magnet'), false, 'max level');
+  assert.equal(p.upgradeCost('magnet'), undefined);
+  assert.equal(p.data.coins, 10000 - UPGRADE_COST.reduce((a, b) => a + b));
+  assert.equal(p.powerupTime('magnet'), 10 * 2.25);
+  assert.equal(p.powerupTime('shield'), 15);
+  assert.equal(p.upgrade('elephant'), false);
+  assert.equal(createProgress(store).upgradeLevel('magnet'), 5, 'persisted');
+  assert.equal(createProgress(mem()).upgradeLevel('magnet'), 0, 'fresh save not shared');
 });

@@ -22,6 +22,24 @@ export function classifyHit(player, obstacle) {
   return 'none';
 }
 
+// Height of the surface under the player: a ramp rises to its far end, a bus roof can be stood on once you
+// are up there (coming at it from the road is still a crash). The player's front edge decides, so the ramp
+// top hands over to the roof without the body clipping the bus.
+export function groundAt(box, items) {
+  let g = 0;
+  const front = box.z - box.d / 2;
+  for (const o of items) {
+    if (Math.abs(box.x - o.x) >= o.w / 2) continue;
+    if (o.type === 'ramp') {
+      const back = o.z + o.d / 2;
+      if (front <= back && front >= o.z - o.d / 2) g = Math.max(g, Math.min(o.h, (o.h * (back - front)) / o.d));
+    } else if (o.name === 'bus' && Math.abs(box.z - o.z) < (o.d + box.d) / 2 && box.y >= o.y + o.h - 0.6) {
+      g = Math.max(g, o.y + o.h);
+    }
+  }
+  return g;
+}
+
 export function firstHit(player, obstacles) {
   const rank = { none: 0, stumble: 1, caught: 2 };
   let best = { result: 'none', obstacle: null };

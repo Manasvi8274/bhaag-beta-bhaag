@@ -1,4 +1,5 @@
 // DOM overlay: menu, HUD, pause, game over, shop/missions/daily modal, flash/hint/toast. Text via textContent only.
+import { VERSION } from './config.js';
 const OUTLINE = '3px 0 #1b1b1b,-3px 0 #1b1b1b,0 3px #1b1b1b,0 -3px #1b1b1b,2px 2px #1b1b1b,-2px -2px #1b1b1b,2px -2px #1b1b1b,-2px 2px #1b1b1b';
 const SAFE = 'env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left)';
 const CSS = `
@@ -41,6 +42,8 @@ const CSS = `
 #ui .panel h2 { margin: 0 0 8px; font-size: 32px; color: #ff006e; }
 #ui .item { display: flex; align-items: center; gap: 10px; padding: 8px; border-bottom: 2px dashed #e0cfa8; text-align: left; font-size: 18px; }
 #ui .item .grow { flex: 1; } #ui .item button { font-size: 16px; padding: 6px 14px; box-shadow: 0 4px 0 #1b1b1b; }
+#ui .panel h3 { margin: 14px 0 2px; color: #ff006e; } #ui .item small { display: block; font-size: 14px; letter-spacing: 1px; }
+#ui .ver { position: absolute; left: 10px; bottom: 6px; font-size: 12px; opacity: 0.6; }
 #ui .sw { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #1b1b1b; flex: none; }
 @keyframes bbb-flash { 0% { opacity: 0; transform: scale(.6); } 15% { opacity: 1; transform: scale(1.08); } 30% { transform: scale(1); } 70% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes bbb-hint { 0% { opacity: 0; } 10% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
@@ -82,6 +85,7 @@ export function createUI(root, h) {
   el('div', 'sub o', 'Papa is coming with the chappal!', mHead);
   const mBottom = el('div', 'col push', null, menu);
   const menuBest = el('div', 'stat o', '', mBottom);
+  el('div', 'ver', `v${VERSION}`, menu);
   const mRow = el('div', 'row', null, mBottom);
   btn(mRow, '🛒', 'icon gold', () => h.onShop());
   btn(mRow, '▶ Play', 'big', () => h.onStart());
@@ -175,7 +179,7 @@ export function createUI(root, h) {
       revive.dataset.afford = w >= reviveCost ? '1' : '';
       only(over);
     },
-    showShop(skins, data) {
+    showShop(skins, data, upgrades = []) {
       openPanel('Beta Ki Dukaan', (p) => {
         el('div', null, `🪙 ${data.coins}`, p).style.fontSize = '20px';
         for (const [id, s] of Object.entries(skins)) {
@@ -186,6 +190,15 @@ export function createUI(root, h) {
           if (data.skin === id) el('div', null, '✔ Wearing', r);
           else if (data.owned.includes(id)) btn(r, 'Wear', 'ok', () => h.onSkin(id));
           else btn(r, `🪙 ${s.price}`, 'gold', () => h.onSkin(id)).disabled = data.coins < s.price;
+        }
+        el('h3', null, 'Power-up Upgrades', p);
+        for (const u of upgrades) {
+          const r = el('div', 'item', null, p);
+          el('div', 'pu', PU_ICON[u.name], r);
+          const info = el('div', 'grow', u.label, r);
+          el('small', null, `${'●'.repeat(u.level)}${'○'.repeat(5 - u.level)}  ${Math.round(u.secs)}s`, info);
+          if (u.cost === undefined) el('div', null, 'MAX', r);
+          else btn(r, `🪙 ${u.cost}`, 'gold', () => h.onUpgrade(u.name)).disabled = data.coins < u.cost;
         }
       });
     },

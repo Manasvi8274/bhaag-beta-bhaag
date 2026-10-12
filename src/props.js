@@ -58,6 +58,23 @@ const BUILD = {
     box(g, 0.36, 0.04, 0.065, 0xffffff, 0, 0.32, 0.04);
     for (const x of [-0.62, 0.62]) ball(g, 0.05, 0xff2d2d, x, 0.9, 0.04, glow(0xff0000));
   },
+  ramp(g) { // wooden plank ramp up to a bus roof: low end at +z (towards the player), 3.2 m high at -z
+    const L = 6, H = 3.2, deck = new THREE.Group();
+    deck.position.set(0, H / 2, 0);
+    deck.rotation.x = Math.atan2(H, L);
+    g.add(deck);
+    const len = Math.hypot(L, H);
+    box(deck, 1.5, 0.1, len, 0xb07a45, 0, 0, 0);
+    for (const x of [-0.78, 0.78]) box(deck, 0.08, 0.18, len, 0xffd60a, x, 0.04, 0); // yellow rails
+    for (let i = 0; i < 9; i++) box(deck, 1.5, 0.03, 0.12, 0x6e4a26, 0, 0.065, -len / 2 + 0.4 + i * ((len - 0.8) / 8));
+    for (const [z, h] of [[-2.6, 2.95], [-0.6, 1.9]]) for (const x of [-0.65, 0.65]) box(g, 0.1, h, 0.1, 0x5a3a1e, x, h / 2, z);
+    box(g, 1.4, 0.08, 0.08, 0x5a3a1e, 0, 2.2, -2.6); // cross brace
+  },
+  chappal(g) { // Papa's thrown hawai chappal, flat; game.js spins it
+    box(g, 0.22, 0.04, 0.48, 0xf5f5f0, 0, 0.04, 0);
+    box(g, 0.23, 0.03, 0.49, 0x1d4ed8, 0, 0.005, 0);
+    for (const s of [-1, 1]) box(g, 0.035, 0.05, 0.2, 0x1d4ed8, s * 0.055, 0.08, -0.08).rotation.y = s * 0.45;
+  },
   banner(g) { // shaadi banner across the street: slide under it
     for (const x of [-3.2, 3.2]) {
       cyl(g, 0.07, 0.08, 2.3, 0xc8a165, x, 1.15, 0, undefined, 8);

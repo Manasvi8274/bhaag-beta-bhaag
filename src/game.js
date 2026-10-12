@@ -1,9 +1,9 @@
 import * as THREE from '../vendor/three.module.js';
-import { SPEED_START, SPEED_MAX, SPEED_RAMP } from './config.js';
+import { SPEED_START, SPEED_MAX, SPEED_RAMP, LANES } from './config.js';
 import { createPlayer, applyAction, updatePlayer, getHitbox } from './player.js';
-import { aabbOverlap, firstHit } from './collision.js';
+import { aabbOverlap, firstHit, groundAt } from './collision.js';
 import { createSpawner, spawnUntil } from './spawner.js';
-import { createChaser, stumble, catchNow, updateChaser } from './chaser.js';
+import { createChaser, stumble, catchNow, updateChaser, throwDue } from './chaser.js';
 import { createStickman } from './stickman.js';
 import { createProp } from './props.js';
 import { createWorld } from './world.js';
@@ -13,9 +13,10 @@ import { createAudio } from './audio.js';
 import { createFx } from './fx.js';
 import { createAds } from './ads.js';
 import { createProgress, SKINS } from './progress.js';
-import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL } from './powerups.js';
+import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL, POWERUP_TIME } from './powerups.js';
 
 const CAUGHT_SCENE_TIME = 2.2;
+const THROW_WINDUP = 0.55, CHAPPAL_REL_SPEED = 6; // warning time, and how much faster than Beta it flies
 const SKY = [new THREE.Color(0x9bd4ff), new THREE.Color(0xffb37a), new THREE.Color(0x8a78c0)]; // day, sunset, dusk
 const CYCLE = 3000; // metres per day/sunset/dusk loop
 const HINTS = [[0.8, '👈 Swipe left / right 👉'], [4.5, '👆 Swipe up to jump'], [8, '👇 Swipe down to slide']];
@@ -70,16 +71,24 @@ export function startGame(canvas, uiRoot) {
     onHome() { if (state === 'paused') finishRun(); goMenu(); },
     onSound() { progress.setSetting('muted', !progress.data.muted); audio.setMuted(progress.data.muted); ui.setSettings(progress.data); },
     onVibrate() { progress.setSetting('vibrate', !progress.data.vibrate); ui.setSettings(progress.data); vibrate(40); },
-    onShop: () => ui.showShop(SKINS, progress.data),
+    onShop: () => ui.showShop(SKINS, progress.data, upgradeList()),
+    onUpgrade(name) {
+      if (progress.upgrade(name)) audio.play('powerup');
+      ui.showShop(SKINS, progress.data, upgradeList());
+      ui.setWallet(progress.data.coins);
+    },
     onSkin(id) {
       if (progress.select(id) || progress.buy(id)) { applySkin(); audio.play('powerup'); }
-      ui.showShop(SKINS, progress.data);
+      ui.showShop(SKINS, progress.data, upgradeList());
       ui.setWallet(progress.data.coins);
     },
     onMissions: () => ui.showMissions(progress.data.missions, progress.multiplier()),
     onClaimDaily() { progress.claimDaily(today()); ui.setWallet(progress.data.coins); audio.play('powerup'); },
   });
   ui.setSettings(progress.data);
+  const upgradeList = () => Object.keys(POWERUP_TIME).map((name) => ({
+    name, label: POWERUP_LABEL[name], level: progress.upgradeLevel(name), cost: progress.upgradeCost(name), secs: progress.powerupTime(name),
+  }));
 
   function clearItems() {
     if (run) for (const it of run.items) scene.remove(it.mesh);
@@ -93,7 +102,7 @@ export function startGame(canvas, uiRoot) {
       p: createPlayer(), z: 0, speed: SPEED_START, prevLane: 1, t: 0, hint: 0,
       spawner: createSpawner((Math.random() * 1e9) | 0), chaser: createChaser(), pu: createPowerups(),
       items: [], hitSet: new Set(), coins: 0, committed: 0, score: 0, stumbleT: 0, invuln: 0,
-      caughtT: 0, smackT: 0, papaZ: 3, papaX: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
+      caughtT: 0, smackT: 0, papaZ: 3, papaX: 0, ground: 0, floorS: 0, pendingThrow: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
       stats: { score: 0, coins: 0, distance: 0, jumps: 0, slides: 0, powerups: 0, dodges: 0 },
     };
     if (progress.data.tutorialDone) run.hint = HINTS.length;
@@ -150,6 +159,7 @@ export function startGame(canvas, uiRoot) {
     run.papaZ = 3;
     run.invuln = 2.5;
     run.stumbleT = 0;
+    run.pendingThrow = 0;
     Object.assign(run.p, { y: 0, vy: 0, grounded: true, sliding: false, pendingSlide: false });
     run.items = run.items.filter((it) => {
       if (it.item.type !== 'obstacle' || it.item.z < run.z - 40) return true;
@@ -222,8 +232,8 @@ export function startGame(canvas, uiRoot) {
   function collect(box) {
     const magnet = isActive(run.pu, 'magnet');
     run.items = run.items.filter(({ item, mesh }) => {
-      if (item.z - item.d / 2 > run.z + 10) { scene.remove(mesh); return false; } // behind camera
-      if (item.type === 'obstacle') return true;
+      if (item.z - item.d / 2 > run.z + 10 || (item.name === 'chappal' && item.z < run.z - 40)) { scene.remove(mesh); return false; } // behind camera, or a missed chappal
+      if (item.type === 'obstacle' || item.type === 'ramp') return true;
       if (magnet && item.type === 'coin' && item.z > run.z - 16 && item.z < run.z + 1) {
         item.x = ease(item.x, box.x, 10, run.dt);
         item.y = ease(item.y, box.y + 0.6, 10, run.dt);
@@ -239,7 +249,7 @@ export function startGame(canvas, uiRoot) {
         fx.burst(item.x, item.y + 0.3, item.z, 0xffd60a, 5, { speed: 2, up: 2, life: 0.35 });
         audio.play('coin');
       } else {
-        activate(run.pu, item.name);
+        activate(run.pu, item.name, progress.powerupTime(item.name));
         run.stats.powerups += 1;
         fx.burst(item.x, item.y + 0.4, item.z, 0xff70a6, 16, { speed: 4, up: 4 });
         ui.toast(POWERUP_LABEL[item.name] + '!');
@@ -275,6 +285,29 @@ export function startGame(canvas, uiRoot) {
     ui.flash('Ruk ja!');
   }
 
+  // Papa's chappal: a warning, then it flies down the lane Beta is in. Dodge, jump or slide; a hit is a stumble
+  // (and so right after one, Pakda!).
+  function updateChappals(dt) {
+    if (throwDue(run.chaser)) {
+      run.pendingThrow = THROW_WINDUP;
+      run.throwX = LANES[run.p.lane]; // aimed when the warning shows, so reacting to it saves you
+      ui.flash('⚠️ Chappal aayi!');
+      audio.play('whoosh');
+    }
+    if (run.pendingThrow > 0 && (run.pendingThrow -= dt) <= 0) {
+      const item = { type: 'obstacle', name: 'chappal', kind: 'low', x: run.throwX, y: 0.9, z: run.z + run.papaZ - 0.5, w: 0.5, h: 0.35, d: 0.5 };
+      const mesh = createProp('chappal');
+      scene.add(mesh);
+      run.items.push({ item, mesh });
+    }
+    for (const { item, mesh } of run.items) {
+      if (item.name !== 'chappal') continue;
+      item.z -= (run.speed + CHAPPAL_REL_SPEED) * dt;
+      mesh.position.set(item.x, item.y, item.z);
+      mesh.rotation.x -= dt * 18;
+    }
+  }
+
   function updatePlaying(dt) {
     const p = run.p;
     run.dt = dt;
@@ -282,13 +315,15 @@ export function startGame(canvas, uiRoot) {
     if (run.hint < HINTS.length && run.t >= HINTS[run.hint][0]) ui.hint(HINTS[run.hint++][1]);
     run.speed = Math.min(SPEED_MAX, run.speed + SPEED_RAMP * dt);
     run.z -= run.speed * dt;
-    updatePlayer(p, dt);
+    run.ground = groundAt({ ...getHitbox(p), z: run.z }, run.items.map((it) => it.item));
+    updatePlayer(p, dt, run.ground);
     updateChaser(run.chaser, dt);
+    updateChappals(dt);
     updatePowerups(run.pu, dt);
     run.stumbleT = Math.max(0, run.stumbleT - dt);
     run.invuln = Math.max(0, run.invuln - dt);
-    if (p.grounded && !run.wasGrounded) fx.burst(p.x, 0.05, run.z, 0xc9b79c, 6, { speed: 2, up: 1, life: 0.4 });
-    else if (p.grounded && Math.random() < dt * (p.sliding ? 30 : 6)) fx.burst(p.x, 0.05, run.z + 0.3, 0xc9b79c, 1, { speed: 1, up: 1, life: 0.4, gravity: -3 });
+    if (p.grounded && !run.wasGrounded) fx.burst(p.x, p.y + 0.05, run.z, 0xc9b79c, 6, { speed: 2, up: 1, life: 0.4 });
+    else if (p.grounded && Math.random() < dt * (p.sliding ? 30 : 6)) fx.burst(p.x, p.y + 0.05, run.z + 0.3, 0xc9b79c, 1, { speed: 1, up: 1, life: 0.4, gravity: -3 });
     run.wasGrounded = p.grounded;
 
     spawnItems();
@@ -338,16 +373,17 @@ export function startGame(canvas, uiRoot) {
     sun.position.set(p.x + 6, 14, run.z + 4);
     sun.target.position.set(p.x, 0, run.z - 4);
     const caught = state === 'caught' || state === 'over';
+    run.floorS = ease(run.floorS, run.ground, 5, dt); // camera rises with Beta onto a bus roof, ignores jumps
     const camTarget = caught
       ? new THREE.Vector3(p.x * 0.4 + 1.2, 2.0, run.z - 4.4) // front, road side: never inside buildings
-      : new THREE.Vector3(p.x * 0.6, 3.2 + p.y * 0.3, run.z + 6.5);
+      : new THREE.Vector3(p.x * 0.6, 3.2 + run.floorS + (p.y - run.floorS) * 0.3, run.z + 6.5);
     camera.position.lerp(camTarget, Math.min(1, dt * (caught ? 2.5 : 8)));
     if (shake > 0) {
       camera.position.x += (Math.random() - 0.5) * shake;
       camera.position.y += (Math.random() - 0.5) * shake;
       shake = Math.max(0, shake - dt);
     }
-    camera.lookAt(p.x * (caught ? 1 : 0.4), caught ? 1.1 : 1.2, run.z - (caught ? -0.3 : 6));
+    camera.lookAt(p.x * (caught ? 1 : 0.4), caught ? 1.1 + p.y : 1.2 + run.floorS, run.z - (caught ? -0.3 : 6));
     camera.fov = baseFov + ((run.speed - SPEED_START) / (SPEED_MAX - SPEED_START)) * 8; // speed feel
     camera.updateProjectionMatrix();
     // Day -> sunset -> dusk -> day as you run.

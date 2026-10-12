@@ -2,9 +2,9 @@
 export const POWERUP_TIME = { shield: 15, magnet: 10, jump: 10, double: 12 };
 export const POWERUP_LABEL = { shield: "Mummy's Shield", magnet: "Dadi's Ladoo Magnet", jump: 'Doodh Power Jump', double: 'Double Coins' };
 
-export const createPowerups = () => ({ timers: {} });
+export const createPowerups = () => ({ timers: {}, max: {} });
 
-export function activate(pu, name) { pu.timers[name] = POWERUP_TIME[name]; }
+export function activate(pu, name, secs = POWERUP_TIME[name]) { pu.timers[name] = pu.max[name] = secs; }
 
 export function updatePowerups(pu, dt) {
   for (const k of Object.keys(pu.timers)) {
@@ -22,4 +22,4 @@ export function consume(pu, name) {
   return true;
 }
 
-export const listActive = (pu) => Object.entries(pu.timers).map(([name, t]) => ({ name, frac: t / POWERUP_TIME[name] }));
+export const listActive = (pu) => Object.entries(pu.timers).map(([name, t]) => ({ name, frac: t / (pu.max[name] || POWERUP_TIME[name]) }));

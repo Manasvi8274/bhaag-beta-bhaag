@@ -45,10 +45,13 @@ test('every row is passable and items are well formed', () => {
   const items = spawnUntil(s, -10000);
   let coins = 0;
   for (const it of items) {
-    assert.ok(['obstacle', 'coin', 'powerup'].includes(it.type));
+    assert.ok(['obstacle', 'coin', 'powerup', 'ramp'].includes(it.type));
     for (const f of ['x', 'y', 'z', 'w', 'h', 'd']) assert.equal(typeof it[f], 'number', f);
     assert.ok([-2, 0, 2].includes(it.x), `x ${it.x}`);
-    if (it.type === 'coin') { coins++; assert.ok(it.y === 0.8 || it.y === 0.4); }
+    if (it.type === 'coin') { coins++; assert.ok([0.4, 0.8, 4.0].includes(it.y), `coin y ${it.y}`); }
+    else if (it.type === 'ramp') { // its top end meets the front of a bus in the same lane
+      assert.ok(items.some((b) => b.name === 'bus' && b.x === it.x && Math.abs(b.z + b.d / 2 - (it.z - it.d / 2)) < 1e-9), `ramp z=${it.z}`);
+    }
     else if (it.type === 'powerup') assert.ok(POWERUP_KINDS.includes(it.name));
     else { assert.ok(CATALOG[it.name]); assert.equal(it.kind, CATALOG[it.name].kind); }
   }
@@ -64,11 +67,22 @@ test('every row is passable and items are well formed', () => {
   const ups = items.filter(i => i.type === 'powerup');
   assert.equal(new Set(ups.map(u => u.name)).size, 4, 'all power-ups appear');
   assert.ok(ups.length > 20 && ups.length < 200, `power-ups ${ups.length}`);
-  for (const c of items.filter(i => i.type !== 'obstacle')) {
+  for (const c of items.filter(i => i.type !== 'obstacle' && i.type !== 'ramp' && i.y < 3)) { // roof coins sit on the bus
     for (const o of solid) {
       if (o.x === c.x) assert.ok(Math.abs(o.z - c.z) >= o.d / 2 + 0.3, `coin z=${c.z} inside ${o.name} z=${o.z}`);
     }
   }
   const types = new Set(items.filter(i => i.type === 'obstacle').map(i => i.name));
   assert.equal(types.size, 8, 'all obstacle types appear');
+});
+
+test('some buses get a ramp and roof coins, nothing else sits on a ramp', () => {
+  const items = spawnUntil(createSpawner(7), -10000);
+  const ramps = items.filter((i) => i.type === 'ramp'), roof = items.filter((i) => i.type === 'coin' && i.y > 3);
+  assert.ok(ramps.length > 10, `ramps ${ramps.length}`);
+  assert.equal(roof.length, ramps.length * 4);
+  for (const r of ramps) for (const o of items) {
+    if (o === r || o.x !== r.x || o.type === 'coin') continue;
+    assert.ok(Math.abs(o.z - r.z) >= (o.d + r.d) / 2 - 1e-9, `${o.name} z=${o.z} on ramp z=${r.z}`);
+  }
 });

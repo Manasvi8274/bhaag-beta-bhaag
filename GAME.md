@@ -54,7 +54,9 @@ remote; Papa chases him through Indian streets with a chappal. Target: PWA + And
 
 ## Roadmap status
 1. Core — done. 2. Juice — done (particles, shake, speed FOV, flash, vibration). 3. Audio — done.
-4. Power-ups — done (shield, magnet, doodh jump, double coins). 5. Variety — day/sunset/dusk cycle done; ramps/bus roofs, zones: later.
+4. Power-ups — done (shield, magnet, doodh jump, double coins). 5. Variety — day/sunset/dusk cycle done; zones: later.
+
+**v1.1:** ramps onto bus roofs (`groundAt` in collision.js, `updatePlayer(p, dt, groundY)`), Papa throws his chappal after a stumble (`throwDue` in chaser.js, aimed when the warning shows), power-up upgrades in the shop (`progress.upgrade`, +25%/level, 5 levels). `tools/shots.html?scene=roof|hit|dodge` prints a QA summary.
 6. Meta — done (missions + multiplier, shop skins, daily reward, coin revive). 7. Polish — done (pause, auto-pause, settings, tutorial hints, loading screen).
 8. Store — PWA + Android project + icons + privacy + listing done; needs Android Studio build + phone screenshots.
 Later ideas: rewarded ad for revive (AdMob), bus-roof running, more zones, Papa skins, leaderboard.

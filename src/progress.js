@@ -1,3 +1,5 @@
+import { POWERUP_TIME } from './powerups.js';
+
 // Saved player progress: wallet, best, missions, skins, daily reward, settings. Pure (storage injected).
 export const SKINS = {
   classic: { name: 'School Day', cap: 0xd62828, bag: 0x1d4ed8, price: 0 },
@@ -15,6 +17,8 @@ const POOL = [
   { stat: 'powerups', text: (n) => `Grab ${n} power-ups in one run`, base: 1, step: 1 },
   { stat: 'dodges', text: (n) => `Change lane ${n} times in one run`, base: 20, step: 10 },
 ];
+// Power-up upgrades: each level makes that power-up last 25% longer.
+export const UPGRADE_COST = [250, 600, 1200, 2500, 5000];
 export const DAILY_REWARDS = [50, 75, 100, 150, 200, 300, 500];
 const KEY = 'bbb-save-v1';
 const DEFAULTS = { coins: 0, best: 0, skin: 'classic', owned: ['classic'], muted: false, vibrate: true,
@@ -36,6 +40,7 @@ export function createProgress(storage) {
   let d;
   try { d = { ...DEFAULTS, ...JSON.parse(storage?.getItem(KEY) || '{}') }; } catch { d = { ...DEFAULTS }; }
   if (!SKINS[d.skin]) d.skin = 'classic';
+  d.upgrades = { ...(d.upgrades || {}) };
   if (!Array.isArray(d.missions) || d.missions.length !== 3) {
     d.missions = [];
     for (let i = 0; i < 3; i++) d.missions.push(makeMission(d.level + i, d.missions.map((m) => m.stat)));
@@ -53,6 +58,14 @@ export function createProgress(storage) {
       if (!s || d.owned.includes(id) || d.coins < s.price) return false;
       d.coins -= s.price; d.owned.push(id); d.skin = id; save(); return true;
     },
+    upgradeLevel: (name) => d.upgrades[name] || 0,
+    upgradeCost(name) { return UPGRADE_COST[this.upgradeLevel(name)]; }, // undefined at max level
+    upgrade(name) {
+      const cost = this.upgradeCost(name);
+      if (!(name in POWERUP_TIME) || cost === undefined || d.coins < cost) return false;
+      d.coins -= cost; d.upgrades[name] = this.upgradeLevel(name) + 1; save(); return true;
+    },
+    powerupTime(name) { return POWERUP_TIME[name] * (1 + 0.25 * this.upgradeLevel(name)); },
     select(id) { if (!d.owned.includes(id)) return false; d.skin = id; save(); return true; },
     setSetting(key, value) { if (key === 'muted' || key === 'vibrate' || key === 'tutorialDone') { d[key] = value; save(); } },
     // Missions reached during a run, reported once each (for a mid-run toast).

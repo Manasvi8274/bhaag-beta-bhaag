@@ -25,12 +25,22 @@ sabzi thelas and buses, duck under shaadi banners, and leap over potholes. Trip 
 🎯 **Missions** – finish missions to raise your score multiplier up to x10
 🛒 **Beta Ki Dukaan** – spend coins on new caps and school bags
 🎁 **Daily Inaam** – come back every day for bigger rewards
+🚌 **Bus-roof running** – take the ramp, run on the roof, grab the coins up there
+🩴 **Chappal attack** – when Papa catches up he throws his chappal: dodge it!
+⬆️ **Upgrades** – make every power-up last longer
 ❤️ **Bachao!** – spend coins to escape Papa and keep running
 🌅 Day turns to sunset as you run further
 📴 **Plays fully offline**, small download, smooth on budget phones
 🔒 No forced ads ever — watch one only if you want a second chance. No accounts, no sign-up.
 
 Every Indian kid knows this chase. How far can YOU run before Papa catches you?
+
+## Release notes (paste into "What's new")
+v1.1
+• Run up ramps onto bus roofs and grab the roof coins!
+• Papa now THROWS his chappal when he's right behind you - dodge it!
+• Power-up upgrades in Beta Ki Dukaan: make every power-up last longer
+• New obstacles: police barricade and shaadi banner; detailed cows, autos, buses and thelas
 
 ## Data safety form (because of AdMob)
 - Collects/shares data: **Yes** — via the Google Mobile Ads SDK: *Device or other IDs* (advertising ID), *App activity → App interactions*, *App info and performance → Diagnostics*; purpose **Advertising or marketing** and **Analytics**; shared with Google.

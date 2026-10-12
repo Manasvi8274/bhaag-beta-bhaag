@@ -78,3 +78,21 @@ test('moving LEFT is smooth too (no teleport)', () => {
   run(p, 0.3);
   assert.equal(p.x, LANES[0]);
 });
+
+test('ground height: carried up a ramp, runs on a roof, falls off the end', () => {
+  const p = createPlayer();
+  for (let g = 0; g <= 3.2; g += 0.2) updatePlayer(p, 1 / 60, g);
+  assert.ok(p.grounded && Math.abs(p.y - 3.2) < 0.21);
+  run2(p, 0.5, 3.2);
+  assert.equal(p.y, 3.2);
+  applyAction(p, 'jump');
+  run2(p, 0.3, 3.2);
+  assert.ok(p.y > 3.2 && !p.grounded, 'jumps from the roof');
+  run2(p, 1, 3.2);
+  assert.ok(p.grounded && p.y === 3.2, 'lands back on the roof');
+  updatePlayer(p, 1 / 60, 0);
+  assert.equal(p.grounded, false, 'off the end: falling');
+  run2(p, 1, 0);
+  assert.ok(p.grounded && p.y === 0);
+});
+function run2(p, secs, g) { for (let t = 0; t < secs; t += 1 / 60) updatePlayer(p, 1 / 60, g); }

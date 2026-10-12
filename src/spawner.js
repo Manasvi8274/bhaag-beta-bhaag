@@ -19,6 +19,7 @@ export const CATALOG = {
 };
 
 const LANE_X = [-2, 0, 2];
+const RAMP_LEN = 6;
 const BLOCKS = ['cow', 'auto', 'cart', 'bus'];
 const LOWS = ['bricks', 'pothole', 'barricade'];
 export const POWERUP_KINDS = ['shield', 'magnet', 'jump', 'double'];
@@ -45,7 +46,14 @@ function makeRow(rng, z) {
   for (let i = 2; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [lanes[i], lanes[j]] = [lanes[j], lanes[i]]; }
   const blockCount = Math.floor(rng() * 3);
   const lowLanes = new Set();
-  for (let i = 0; i < blockCount; i++) items.push(obstacle(pick(rng, BLOCKS), LANE_X[lanes[i]], z));
+  for (let i = 0; i < blockCount; i++) {
+    const name = pick(rng, BLOCKS), x = LANE_X[lanes[i]];
+    items.push(obstacle(name, x, z));
+    if (name === 'bus' && rng() < 0.6) { // ramp up to the roof, with a coin trail on top
+      items.push({ type: 'ramp', name: 'ramp', x, y: 0, z: z + 4 + RAMP_LEN / 2, w: 1.6, h: CATALOG.bus.h, d: RAMP_LEN });
+      items.push(...coins(x, CATALOG.bus.h + 0.8, z + 3, 4));
+    }
+  }
   for (let i = blockCount; i < 3; i++) {
     if (rng() < 0.4) { items.push(obstacle(pick(rng, LOWS), LANE_X[lanes[i]], z)); lowLanes.add(lanes[i]); }
   }

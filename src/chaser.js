@@ -1,7 +1,7 @@
 import { STUMBLE_WINDOW, CHASER_FAR, CHASER_NEAR } from './config.js';
 
 export function createChaser() {
-  return { distance: CHASER_FAR, time: 0, lastStumble: -Infinity, caught: false };
+  return { distance: CHASER_FAR, time: 0, lastStumble: -Infinity, caught: false, thrown: 0 };
 }
 
 export function stumble(c) {
@@ -12,6 +12,7 @@ export function stumble(c) {
     return 'caught';
   }
   c.lastStumble = c.time;
+  c.thrown = 0;
   c.distance = CHASER_NEAR;
   return 'stumble';
 }
@@ -28,6 +29,14 @@ export function updateChaser(c, dt) {
     c.distance += 3 * dt;
     c.distance = Math.min(c.distance, CHASER_FAR);
   }
+}
+
+// Papa throws his chappal at these times (s) after a stumble, while he is still right behind.
+export const THROW_AT = [1.0, 3.4];
+export function throwDue(c) {
+  if (c.caught || c.thrown >= THROW_AT.length || c.time - c.lastStumble < THROW_AT[c.thrown]) return false;
+  c.thrown += 1;
+  return c.time - c.lastStumble <= STUMBLE_WINDOW;
 }
 
 export function isVisible(c) {

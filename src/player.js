@@ -50,17 +50,22 @@ export function applyAction(p, action) {
   }
 }
 
-export function updatePlayer(p, dt) {
+// groundY: height of whatever is under the player (0 = road, ramps and bus roofs are higher).
+export function updatePlayer(p, dt, groundY = 0) {
   const laneStep = (LANES[1] - LANES[0]) / LANE_SWITCH_TIME;
   const targetX = LANES[p.lane];
   const step = laneStep * dt;
   p.x += Math.sign(targetX - p.x) * Math.min(Math.abs(targetX - p.x), step);
 
+  if (p.grounded) {
+    if (groundY > p.y) p.y = groundY; // carried up a ramp
+    else if (groundY < p.y - 0.01) { p.grounded = false; p.vy = 0; } // ran off a bus roof
+  }
   if (!p.grounded) {
     p.vy += GRAVITY * dt;
     p.y += p.vy * dt;
-    if (p.y <= 0) {
-      p.y = 0;
+    if (p.y <= groundY) {
+      p.y = groundY;
       p.vy = 0;
       p.grounded = true;
       if (p.pendingSlide) {
