@@ -8,7 +8,7 @@ const CSS = `
 #ui .hidden { display: none !important; }
 #ui .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 8px; background: rgba(10,10,30,0.55); pointer-events: auto; text-align: center; padding: ${SAFE}; }
-#ui .menu { justify-content: space-between; background: linear-gradient(rgba(10,10,30,.55), transparent 35%, transparent 65%, rgba(10,10,30,.6)); }
+#ui .menu { justify-content: flex-start; } #ui .menu .push { margin-top: auto; } #ui .menu { background: linear-gradient(rgba(10,10,30,.55), transparent 35%, transparent 65%, rgba(10,10,30,.6)); }
 #ui .col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 #ui .bar { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px 0; }
 #ui .title { font-size: 54px; line-height: .95; color: #ffd60a; transform: rotate(-3deg); margin: 4px 0; }
@@ -80,7 +80,7 @@ export function createUI(root, h) {
   el('div', null, 'Bhaag Beta', title);
   el('div', null, 'Bhaag!', title);
   el('div', 'sub o', 'Papa is coming with the chappal!', mHead);
-  const mBottom = el('div', 'col', null, menu);
+  const mBottom = el('div', 'col push', null, menu);
   const menuBest = el('div', 'stat o', '', mBottom);
   const mRow = el('div', 'row', null, mBottom);
   btn(mRow, '🛒', 'icon gold', () => h.onShop());

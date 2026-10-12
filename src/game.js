@@ -150,6 +150,7 @@ export function startGame(canvas, uiRoot) {
       scene.remove(it.mesh);
       return false;
     });
+    for (const it of run.items) it.mesh.visible = true;
     state = 'playing';
     beta.setMode('run');
     ui.showHUD();
@@ -166,6 +167,7 @@ export function startGame(canvas, uiRoot) {
     papa.setMode('spank');
     ui.flash('Pakda!');
     audio.stopMusic();
+    for (const { item, mesh } of run.items) if (item.z < run.z + 2 && item.z > run.z - 9) mesh.visible = false; // clear the stage
     vibrate(250);
     shake = 0.5;
   }
@@ -288,7 +290,7 @@ export function startGame(canvas, uiRoot) {
   function updateCaught(dt) {
     run.caughtT += dt;
     run.papaZ = ease(run.papaZ, 0.7, 6, dt);
-    run.papaX = ease(run.papaX, run.p.x, 6, dt);
+    run.papaX = ease(run.papaX, run.p.x + 0.55, 6, dt);
     run.p.y = ease(run.p.y, 0, 10, dt);
     run.smackT -= dt;
     if (run.caughtT > 0.5 && run.smackT <= 0) {
@@ -346,8 +348,8 @@ export function startGame(canvas, uiRoot) {
     papa.group.rotation.y = 0.35;
     camera.fov = baseFov;
     camera.updateProjectionMatrix();
-    camera.position.set(Math.sin(t * 0.2) * 0.6, 1.6, -5.2);
-    camera.lookAt(0, 1.25, 0);
+    camera.position.set(Math.sin(t * 0.2) * 0.5, 1.35, camera.aspect > 1 ? -3.6 : -4.6);
+    camera.lookAt(0, camera.aspect > 1 ? 1.55 : 1.3, 0);
     scene.background.copy(SKY[0]);
     scene.fog.color.copy(SKY[0]);
   }
