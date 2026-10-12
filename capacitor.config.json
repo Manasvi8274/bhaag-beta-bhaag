@@ -1,0 +1,6 @@
+{
+  "appId": "com.bhaagbeta.game",
+  "appName": "Bhaag Beta Bhaag!",
+  "webDir": "www",
+  "android": { "backgroundColor": "#ff7b00" }
+}

@@ -3,16 +3,23 @@
 <html><head><meta charset="utf-8"><style>html,body{margin:0;background:#000}canvas{display:block}</style></head>
 <body><canvas id="c"></canvas>
 <script>
-const S = Number(new URLSearchParams(location.search).get('s') || 512);
-const c = document.getElementById('c'); c.width = c.height = S;
-const g = c.getContext('2d'); g.scale(S / 512, S / 512);
+// ?s=512 square icon | ?w=1080&h=1920&k=0.45 splash/adaptive (k = content size as fraction of the short side)
+const q = new URLSearchParams(location.search);
+const W = Number(q.get('w') || q.get('s') || 512), H = Number(q.get('h') || q.get('s') || 512), K = Number(q.get('k') || 1);
+const c = document.getElementById('c'); c.width = W; c.height = H;
+const g = c.getContext('2d');
 
-// background: sunny gradient + speed rays (full bleed so it works as a maskable icon)
-const bg = g.createRadialGradient(220, 230, 40, 256, 256, 380);
+// background: sunny gradient + speed rays, full bleed
+const R = Math.max(W, H);
+const bg = g.createRadialGradient(W * 0.43, H * 0.45, R * 0.08, W / 2, H / 2, R * 0.75);
 bg.addColorStop(0, '#ffe45c'); bg.addColorStop(1, '#ff7b00');
-g.fillStyle = bg; g.fillRect(0, 0, 512, 512);
+g.fillStyle = bg; g.fillRect(0, 0, W, H);
 g.fillStyle = 'rgba(255,255,255,0.18)';
-for (let i = 0; i < 12; i++) { g.save(); g.translate(230, 260); g.rotate(i * Math.PI / 6); g.beginPath(); g.moveTo(0, 0); g.lineTo(400, -40); g.lineTo(400, 40); g.fill(); g.restore(); }
+for (let i = 0; i < 12; i++) { g.save(); g.translate(W * 0.45, H * 0.5); g.rotate(i * Math.PI / 6); g.beginPath(); g.moveTo(0, 0); g.lineTo(R, -R * 0.1); g.lineTo(R, R * 0.1); g.fill(); g.restore(); }
+
+// content is designed on a 512 square, scaled into the centre
+const side = Math.min(W, H) * K;
+g.translate((W - side) / 2, (H - side) / 2); g.scale(side / 512, side / 512);
 
 // stickman running right (content kept inside the 80% safe zone)
 const line = (pts, w = 30) => { g.beginPath(); g.moveTo(...pts[0]); for (const p of pts.slice(1)) g.lineTo(...p); g.lineWidth = w; g.lineCap = g.lineJoin = 'round'; g.strokeStyle = '#151515'; g.stroke(); };

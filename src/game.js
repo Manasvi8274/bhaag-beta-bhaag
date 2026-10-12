@@ -365,6 +365,14 @@ export function startGame(canvas, uiRoot) {
   window.addEventListener('resize', resize);
   resize();
   document.addEventListener('visibilitychange', () => { if (document.hidden) pauseGame(); });
+  // Android back button (Capacitor): pause / resume / go home / exit, never a surprise quit mid-run.
+  const App = window.Capacitor?.Plugins?.App;
+  App?.addListener('backButton', () => {
+    if (state === 'playing') pauseGame();
+    else if (state === 'paused') resume();
+    else if (state === 'over') goMenu();
+    else if (state === 'menu') App.exitApp();
+  });
 
   let menuT = 0;
   function frame(dt) {

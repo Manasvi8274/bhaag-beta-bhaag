@@ -1,1 +1,20 @@
-{ "name": "bhaag-beta-bhaag", "private": true, "type": "module", "scripts": { "test": "node --test tests/" } }
+{
+  "name": "bhaag-beta-bhaag",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "test": "node --test tests/",
+    "serve": "python tools/serve.py 8123",
+    "build": "node tools/build.mjs",
+    "android": "node tools/build.mjs && npx cap sync android && npx cap open android"
+  },
+  "dependencies": {
+    "@capacitor/android": "^7.6.9",
+    "@capacitor/app": "^7.1.2",
+    "@capacitor/core": "^7.6.9"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.6.9"
+  }
+}
