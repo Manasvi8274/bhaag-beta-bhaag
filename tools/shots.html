@@ -1,0 +1,39 @@
+<!doctype html>
+<!-- Store screenshots: steps the real game with a dodging bot, then poses a scene.
+     ?scene=run|papa|caught|menu&t=seconds. Shoot at 540x960 with device scale 2 for 1080x1920. -->
+<html><body style="margin:0;overflow:hidden">
+<iframe id="f" src="../index.html#debug" style="border:0;width:100vw;height:100vh"></iframe>
+<script type="module">
+const q = new URLSearchParams(location.search), scene = q.get('scene') || 'run', T = +(q.get('t') || 6);
+const f = document.getElementById('f');
+f.onload = () => setTimeout(go, 1500);
+function go() {
+  const w = f.contentWindow, doc = f.contentDocument, bbb = w.bbb;
+  // dismiss the daily-reward popup for every scene
+  [...doc.querySelectorAll('button')].find((b) => b.textContent === 'Close' && b.offsetParent)?.click();
+  if (scene === 'menu') { for (let i = 0; i < 60; i++) bbb.frame(1 / 30); return; }
+  bbb.begin();
+  const dt = 1 / 60;
+  for (let i = 0; i < T * 60; i++) {
+    const r = bbb.run, p = r.p, lane = [-2, 0, 2][p.lane];
+    const ahead = r.items.filter(({ item: o }) => o.type === 'obstacle' && o.z < r.z && o.z + o.d / 2 > r.z - 9
+      && (o.kind === 'high' || Math.abs(o.x - lane) < 0.5));
+    if (scene === 'caught') { // steer into the nearest block ahead
+      const blk = r.items.map(({ item }) => item).filter((o) => o.kind === 'block' && o.z < r.z - 3 && o.z > r.z - 25).sort((a, b) => b.z - a.z)[0];
+      const want = blk && [-2, 0, 2].indexOf(blk.x);
+      if (blk && want !== p.lane && i % 10 === 0) bbb.onAction(want < p.lane ? 'left' : 'right');
+    }
+    for (const { item: o } of ahead) {
+      if (o.kind === 'block' && scene !== 'caught') {
+        const free = [0, 1, 2].filter((l) => !r.items.some(({ item: b }) => b.kind === 'block' && Math.abs(b.x - [-2, 0, 2][l]) < 0.5 && Math.abs(b.z - o.z) < 6));
+        const to = free.sort((a, b) => Math.abs(a - p.lane) - Math.abs(b - p.lane))[0];
+        if (to !== undefined && to !== p.lane) bbb.onAction(to < p.lane ? 'left' : 'right');
+      } else if (o.kind === 'low' && p.grounded && o.z + o.d / 2 > r.z - 4) bbb.onAction('jump');
+      else if (o.kind === 'high' && !p.sliding && o.z > r.z - 5) bbb.onAction('slide');
+    }
+    if (scene === 'papa' && i === T * 60 - 70) { r.chaser.distance = 2.5; r.chaser.lastStumble = r.chaser.time; }
+    bbb.frame(dt);
+    if (scene === 'caught' && bbb.state !== 'playing') { for (let k = 0; k < 50; k++) bbb.frame(dt); break; }
+  }
+}
+</script></body></html>

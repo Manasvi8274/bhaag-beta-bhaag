@@ -305,7 +305,7 @@ export function startGame(canvas, uiRoot) {
     beta.setMode(run.stumbleT > 0 ? 'stumble' : !p.grounded ? 'jump' : p.sliding ? 'slide' : 'run');
     papa.setMode('run');
     run.papaZ = ease(run.papaZ, run.chaser.distance, run.t < 2 ? 1 : 4, dt);
-    run.papaX = ease(run.papaX, p.x, 3, dt);
+    run.papaX = ease(run.papaX, p.x + (p.x < 0 ? -0.85 : 0.85), 3, dt); // half a lane outside, so he never hides Beta
   }
 
   function updateCaught(dt) {

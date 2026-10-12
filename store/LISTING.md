@@ -48,7 +48,7 @@ Every Indian kid knows this chase. How far can YOU run before Papa catches you?
 ## Graphics checklist
 - [x] App icon 512×512 — `icons/icon-512.png`
 - [x] Feature graphic 1024×500 — `store/feature-graphic.png`
-- [ ] Phone screenshots (min 2, 1080×1920 recommended): take on your phone — menu, running with a power-up, Papa close behind, caught scene, shop.
+- [x] Phone screenshots 1080×1920 — `store/screenshots/` (regenerate: `tools/shots.html?scene=menu|run|papa|caught&t=secs`, headless Chrome 540×960 at device scale 2)
 
 ## Release steps (one-time setup)
 1. Install **Android Studio** (it includes the Android SDK and the JDK it needs).
