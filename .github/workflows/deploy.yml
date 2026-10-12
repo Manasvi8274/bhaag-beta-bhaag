@@ -35,11 +35,25 @@ jobs:
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 21, cache: gradle }
       - run: npm ci && node tools/build.mjs && npx cap sync android
-      # ponytail: debug-signed APK for sideloading; Play Store needs the signed AAB from Android Studio
-      - run: cd android && ./gradlew assembleDebug --no-daemon
-      - run: cp android/app/build/outputs/apk/debug/app-debug.apk BhaagBetaBhaag.apk
+      # With the upload key secret: Play-ready AAB + release APK signed with the same key (installs over older
+      # builds). Without it: debug APK only.
+      - env:
+          KEYSTORE_B64: '${{ secrets.KEYSTORE_B64 }}'
+          KEYSTORE_PASSWORD: '${{ secrets.KEYSTORE_PASSWORD }}'
+          VERSION_CODE: '${{ github.run_number }}'
+        run: |
+          cd android
+          if [ -n "$KEYSTORE_B64" ]; then
+            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+            KEYSTORE_FILE="$RUNNER_TEMP/upload.jks" ./gradlew bundleRelease assembleRelease --no-daemon
+            cp app/build/outputs/bundle/release/app-release.aab ../BhaagBetaBhaag.aab
+            cp app/build/outputs/apk/release/app-release.apk ../BhaagBetaBhaag.apk
+          else
+            ./gradlew assembleDebug --no-daemon
+            cp app/build/outputs/apk/debug/app-debug.apk ../BhaagBetaBhaag.apk
+          fi
       - env: { GH_TOKEN: '${{ github.token }}' }
         run: |
           gh release delete latest --yes --cleanup-tag || true
-          gh release create latest BhaagBetaBhaag.apk --title "Bhaag Beta Bhaag! (latest build)" \
-            --notes "Android APK built from ${GITHUB_SHA::7}. Download on your phone, open it and allow 'Install unknown apps'. Uses live AdMob ads: never tap your own ads (register your phone as an AdMob test device)."
+          gh release create latest BhaagBetaBhaag.apk $(ls BhaagBetaBhaag.aab 2>/dev/null) --title "Bhaag Beta Bhaag! (latest build)" \
+            --notes "Build ${{ github.run_number }} from ${GITHUB_SHA::7}. BhaagBetaBhaag.aab = upload to Play Console. BhaagBetaBhaag.apk = install on a phone: Download on your phone, open it and allow 'Install unknown apps'. Uses live AdMob ads: never tap your own ads (register your phone as an AdMob test device)."

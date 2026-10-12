@@ -7,7 +7,7 @@ android {
         applicationId "com.bhaagbeta.game"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 1
+        versionCode((System.getenv('VERSION_CODE') ?: '1') as int) // CI passes the run number so every upload is higher
         versionName "1.0"
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         aaptOptions {
@@ -16,8 +16,19 @@ android {
             ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Play upload key: CI decodes it from the KEYSTORE_B64 secret; unsigned release when absent
+    def ks = System.getenv('KEYSTORE_FILE')
+    signingConfigs {
+        if (ks) release {
+            storeFile file(ks)
+            storePassword System.getenv('KEYSTORE_PASSWORD')
+            keyAlias 'upload'
+            keyPassword System.getenv('KEYSTORE_PASSWORD')
+        }
+    }
     buildTypes {
         release {
+            if (ks) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }
