@@ -112,6 +112,7 @@ export function createUI(root, h) {
   const badge = el('div', 'badge', 'NEW BEST!', over);
   const oMissions = el('div', 'col', null, over);
   const revive = btn(over, '', 'ok', () => h.onRevive());
+  const adBtn = btn(over, '📺 Watch ad to escape', 'alt', () => h.onWatchAd());
   btn(over, '↻ Bhaag Again', 'big', () => h.onRestart());
   btn(over, '🏠 Home', 'gold', () => h.onHome());
 
@@ -153,12 +154,16 @@ export function createUI(root, h) {
       list.forEach((p, i) => { pus.children[i].lastChild.style.transform = `scaleX(${Math.max(0, p.frac)})`; });
     },
     showPause() { only(pause); },
+    setAdLoading(on) { adBtn.disabled = on; revive.disabled = on || !revive.dataset.afford; adBtn.textContent = on ? '📺 Loading ad...' : '📺 Watch ad to escape'; },
     setSettings({ muted, vibrate }) {
       mSound.textContent = soundLabel(muted);
       pSound.textContent = `${soundLabel(muted)} Sound ${muted ? 'Off' : 'On'}`;
       pVibe.textContent = `📳 Vibration ${vibrate ? 'On' : 'Off'}`;
     },
-    showGameOver({ score: s, coins: c, best, isNewBest, completed, reviveCost, wallet: w }) {
+    showGameOver({ score: s, coins: c, best, isNewBest, completed, reviveCost, wallet: w, adAvailable }) {
+      adBtn.classList.toggle('hidden', !adAvailable);
+      adBtn.disabled = false;
+      adBtn.textContent = '📺 Watch ad to escape';
       oScore.textContent = `Score ${Math.floor(s)}`;
       oCoins.textContent = `Coins ${c}`;
       oBest.textContent = `Best ${Math.floor(best)}`;
@@ -167,6 +172,7 @@ export function createUI(root, h) {
       for (const m of completed) el('div', 'sub o', `✔ ${m.text}  +🪙${m.reward}`, oMissions);
       revive.textContent = `❤ Bachao! (🪙 ${reviveCost})`;
       revive.disabled = w < reviveCost;
+      revive.dataset.afford = w >= reviveCost ? '1' : '';
       only(over);
     },
     showShop(skins, data) {

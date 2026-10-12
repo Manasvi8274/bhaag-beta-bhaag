@@ -11,6 +11,7 @@ import { createInput } from './input.js';
 import { createUI } from './ui.js';
 import { createAudio } from './audio.js';
 import { createFx } from './fx.js';
+import { createAds } from './ads.js';
 import { createProgress, SKINS } from './progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL } from './powerups.js';
 
@@ -53,6 +54,7 @@ export function startGame(canvas, uiRoot) {
   const fx = createFx(scene);
   const progress = createProgress(storage);
   const audio = createAudio();
+  let ads = createAds();
   audio.setMuted(progress.data.muted);
   const applySkin = () => { const s = SKINS[progress.data.skin]; beta.setColors(s.cap, s.bag); };
   applySkin();
@@ -64,7 +66,7 @@ export function startGame(canvas, uiRoot) {
   window.addEventListener('keydown', unlock, { capture: true });
 
   const ui = createUI(uiRoot, {
-    onStart: begin, onRestart: begin, onPause: pauseGame, onResume: resume, onRevive: revive,
+    onStart: begin, onRestart: begin, onPause: pauseGame, onResume: resume, onRevive: () => revive(false), onWatchAd: watchAd,
     onHome() { if (state === 'paused') finishRun(); goMenu(); },
     onSound() { progress.setSetting('muted', !progress.data.muted); audio.setMuted(progress.data.muted); ui.setSettings(progress.data); },
     onVibrate() { progress.setSetting('vibrate', !progress.data.vibrate); ui.setSettings(progress.data); vibrate(40); },
@@ -91,7 +93,7 @@ export function startGame(canvas, uiRoot) {
       p: createPlayer(), z: 0, speed: SPEED_START, prevLane: 1, t: 0, hint: 0,
       spawner: createSpawner((Math.random() * 1e9) | 0), chaser: createChaser(), pu: createPowerups(),
       items: [], hitSet: new Set(), coins: 0, committed: 0, score: 0, stumbleT: 0, invuln: 0,
-      caughtT: 0, smackT: 0, papaZ: 3, papaX: 0, revives: 0, mult: progress.multiplier(), wasGrounded: true,
+      caughtT: 0, smackT: 0, papaZ: 3, papaX: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
       stats: { score: 0, coins: 0, distance: 0, jumps: 0, slides: 0, powerups: 0, dodges: 0 },
     };
     if (progress.data.tutorialDone) run.hint = HINTS.length;
@@ -102,6 +104,7 @@ export function startGame(canvas, uiRoot) {
     ui.setPowerups([]);
     ui.flash('Bhaag!');
     audio.startMusic();
+    ads.preload(); // so the "watch ad" revive is instant at game over
   }
 
   function goMenu() {
@@ -137,9 +140,12 @@ export function startGame(canvas, uiRoot) {
 
   const reviveCost = () => 100 * 2 ** run.revives;
 
-  function revive() {
-    if (state !== 'over' || !progress.spend(reviveCost())) return;
-    run.revives += 1;
+  function revive(free) {
+    if (state !== 'over') return;
+    if (!free) {
+      if (!progress.spend(reviveCost())) return;
+      run.revives += 1;
+    }
     run.chaser = createChaser();
     run.papaZ = 3;
     run.invuln = 2.5;
@@ -157,6 +163,21 @@ export function startGame(canvas, uiRoot) {
     ui.flash('Phir Bhaag!');
     audio.play('powerup');
     audio.startMusic();
+  }
+
+  // One rewarded-ad escape per run (keeps ads optional and rare).
+  let adBusy = false;
+  async function watchAd() {
+    if (state !== 'over' || run.adUsed || adBusy) return;
+    adBusy = true;
+    ui.setAdLoading(true);
+    audio.setMuted(true); // ads play their own sound
+    const earned = await ads.showRewarded();
+    audio.setMuted(progress.data.muted);
+    adBusy = false;
+    if (earned && state === 'over') { run.adUsed = true; revive(true); return; }
+    ui.setAdLoading(false);
+    if (state === 'over') ui.toast('Ad not finished or not available - try again');
   }
 
   function enterCaught() {
@@ -302,7 +323,7 @@ export function startGame(canvas, uiRoot) {
       const r = finishRun();
       state = 'over';
       ui.showGameOver({ score: run.score, coins: run.coins, best: progress.data.best, isNewBest: r.isNewBest,
-        completed: r.completed, reviveCost: reviveCost(), wallet: progress.data.coins });
+        completed: r.completed, reviveCost: reviveCost(), wallet: progress.data.coins, adAvailable: ads.available && !run.adUsed });
     }
   }
 
@@ -421,6 +442,6 @@ export function startGame(canvas, uiRoot) {
   // Dev hooks: #play skips the menu, #debug exposes a stepper for automated checks.
   if (location.hash.includes('play')) begin();
   if (location.hash.includes('debug')) {
-    window.bbb = { frame, onAction, begin, revive, get state() { return state; }, get run() { return run; }, progress };
+    window.bbb = { frame, onAction, begin, revive, watchAd, setAds: (a) => { ads = a; }, get state() { return state; }, get run() { return run; }, progress };
   }
 }

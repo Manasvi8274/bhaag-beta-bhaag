@@ -1,10 +1,10 @@
 // Offline support: precache the app shell, then stale-while-revalidate everything (incl. Google Fonts).
 // Bump VERSION on every release so players get the new files.
-const VERSION = 'bbb-v1';
+const VERSION = 'bbb-v2';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './privacy.html', './icons/icon-192.png', './icons/icon-512.png',
   './vendor/three.module.js',
-  ...['audio', 'chaser', 'collision', 'config', 'fx', 'game', 'input', 'player', 'powerups', 'progress', 'props',
+  ...['ads', 'audio', 'chaser', 'collision', 'config', 'fx', 'game', 'input', 'player', 'powerups', 'progress', 'props',
     'spawner', 'stickman', 'ui', 'world'].map((m) => `./src/${m}.js`),
 ];
 
