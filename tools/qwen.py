@@ -1,13 +1,14 @@
 """Drive local Qwen (Ollama) to write one module, test it, and loop on failures.
 
 usage: python tools/qwen.py SPEC OUT [--test T] [--ctx F ...] [--iters N]
-Starts on qwen2.5-coder:3b, escalates to qwen2.5:7b-instruct after 3 failed rounds.
+Uses qwen2.5-coder:3b (7B disabled for RAM; see BIG).
 Prints only a short summary; full transcripts go to tools/logs/.
 """
 import argparse, json, re, subprocess, sys, urllib.request, pathlib, time
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent
-SMALL, BIG = "qwen2.5-coder:3b", "qwen2.5:7b-instruct"
+# ponytail: 3B only - 7B ran the PC out of RAM. Set BIG back to "qwen2.5:7b-instruct" if RAM allows.
+SMALL, BIG = "qwen2.5-coder:3b", "qwen2.5-coder:3b"
 
 
 def ask(model, prompt):
