@@ -24,4 +24,18 @@ for (const [name, [w, h, d]] of Object.entries(SIZES)) {
   });
 }
 
+test('power-up props build and glow', () => {
+  for (const name of ['shield', 'magnet', 'jump', 'double']) {
+    const g = createProp(name); g.updateMatrixWorld(true);
+    const s = new THREE.Box3().setFromObject(g).getSize(new THREE.Vector3());
+    assert.ok(s.y > 0.5 && s.y < 1.0 && s.x < 1.0, `${name} size`);
+  }
+});
+
+test('clones share geometry (no leak per spawn)', () => {
+  const a = createProp('cow'), b = createProp('cow');
+  assert.notEqual(a, b);
+  assert.equal(a.children[0].geometry, b.children[0].geometry);
+});
+
 test('unknown prop throws', () => assert.throws(() => createProp('elephant')));

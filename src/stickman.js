@@ -51,12 +51,13 @@ function buildBody(R) {
 }
 
 function addAccessories(type, group, j) {
+  const skin = { cap: mat(0xd62828), bag: mat(0x1d4ed8) };
   if (type === 'beta') {
-    const red = mat(0xd62828);
+    const red = skin.cap;
     mesh(new THREE.SphereGeometry(0.21, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), red, j.head, 0, 0.02, 0);
     mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.02, 16), red, j.head, 0, 0.03, -0.17);
     mesh(new THREE.BoxGeometry(0.06, 0.3, 0.02), red, j.pelvis, 0, 0.35, -0.12);
-    mesh(new THREE.BoxGeometry(0.3, 0.35, 0.15), mat(0x1d4ed8), j.pelvis, 0, 0.35, 0.16);
+    mesh(new THREE.BoxGeometry(0.3, 0.35, 0.15), skin.bag, j.pelvis, 0, 0.35, 0.16);
   } else {
     group.scale.setScalar(1.12);
     const white = mat(0xf5f5f0);
@@ -65,6 +66,7 @@ function addAccessories(type, group, j) {
     mesh(new THREE.BoxGeometry(0.2, 0.04, 0.05), BLACK, j.head, 0, -0.06, -0.19);
     mesh(new THREE.BoxGeometry(0.1, 0.03, 0.26), mat(0x7a4a21), j.elbowR, 0, -0.32, -0.05);
   }
+  return skin;
 }
 
 const KEYS = ['hipL.x', 'hipR.x', 'kneeL.x', 'kneeR.x', 'shoulderL.x', 'shoulderR.x', 'elbowL.x', 'elbowR.x',
@@ -94,11 +96,12 @@ function targets(mode, s, t, phase) {
 export function createStickman(type) {
   const R = type === 'papa' ? 0.1 : 0.085;
   const { group, joints } = buildBody(R);
-  addAccessories(type, group, joints);
+  const skin = addAccessories(type, group, joints);
   let mode = 'idle', phase = 0, t = 0;
   return {
     group,
     joints,
+    setColors(cap, bag) { skin.cap.color.setHex(cap); skin.bag.color.setHex(bag); },
     setMode(m) { if (m !== mode) { mode = m; t = 0; } },
     update(dt, speed = 10) {
       t += dt;

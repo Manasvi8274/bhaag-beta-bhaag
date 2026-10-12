@@ -44,6 +44,21 @@ test('pointerup without pointerdown, and start cleared after up', () => {
   assert.deepEqual(got, ['left']);
 });
 
+test('swipe fires mid-move once, not again on up', () => {
+  const { t, got } = setup();
+  t.dispatchEvent(ev('pointerdown', { clientX: 100, clientY: 100 }));
+  t.dispatchEvent(ev('pointermove', { clientX: 90, clientY: 100 }));
+  assert.deepEqual(got, []);
+  t.dispatchEvent(ev('pointermove', { clientX: 60, clientY: 100 }));
+  t.dispatchEvent(ev('pointermove', { clientX: 20, clientY: 100 }));
+  t.dispatchEvent(ev('pointerup', { clientX: 10, clientY: 100 }));
+  assert.deepEqual(got, ['left']);
+  t.dispatchEvent(ev('pointerdown', { clientX: 100, clientY: 100 }));
+  t.dispatchEvent(ev('pointercancel', {}));
+  t.dispatchEvent(ev('pointerup', { clientX: 300, clientY: 100 }));
+  assert.deepEqual(got, ['left']);
+});
+
 test('dispose removes listeners', () => {
   const { t, got, dispose } = setup();
   dispose();

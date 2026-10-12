@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mulberry32, CATALOG, createSpawner, spawnUntil } from '../src/spawner.js';
+import { mulberry32, CATALOG, createSpawner, spawnUntil, POWERUP_KINDS } from '../src/spawner.js';
 
 test('rng deterministic and in range', () => {
   const a = mulberry32(7), b = mulberry32(7);
@@ -45,10 +45,11 @@ test('every row is passable and items are well formed', () => {
   const items = spawnUntil(s, -10000);
   let coins = 0;
   for (const it of items) {
-    assert.ok(['obstacle', 'coin'].includes(it.type));
+    assert.ok(['obstacle', 'coin', 'powerup'].includes(it.type));
     for (const f of ['x', 'y', 'z', 'w', 'h', 'd']) assert.equal(typeof it[f], 'number', f);
     assert.ok([-2, 0, 2].includes(it.x), `x ${it.x}`);
     if (it.type === 'coin') { coins++; assert.ok(it.y === 0.8 || it.y === 0.4); }
+    else if (it.type === 'powerup') assert.ok(POWERUP_KINDS.includes(it.name));
     else { assert.ok(CATALOG[it.name]); assert.equal(it.kind, CATALOG[it.name].kind); }
   }
   assert.ok(coins > 1000);
@@ -60,7 +61,10 @@ test('every row is passable and items are well formed', () => {
   }
   // coins never overlap an obstacle in their lane (blocks or low ones)
   const solid = items.filter(i => i.type === 'obstacle' && i.name !== 'clothesline');
-  for (const c of items.filter(i => i.type === 'coin')) {
+  const ups = items.filter(i => i.type === 'powerup');
+  assert.equal(new Set(ups.map(u => u.name)).size, 4, 'all power-ups appear');
+  assert.ok(ups.length > 20 && ups.length < 200, `power-ups ${ups.length}`);
+  for (const c of items.filter(i => i.type !== 'obstacle')) {
     for (const o of solid) {
       if (o.x === c.x) assert.ok(Math.abs(o.z - c.z) >= o.d / 2 + 0.3, `coin z=${c.z} inside ${o.name} z=${o.z}`);
     }

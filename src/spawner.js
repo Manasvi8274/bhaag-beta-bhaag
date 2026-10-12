@@ -20,6 +20,7 @@ export const CATALOG = {
 const LANE_X = [-2, 0, 2];
 const BLOCKS = ['cow', 'auto', 'cart', 'bus'];
 const LOWS = ['stone', 'pothole'];
+export const POWERUP_KINDS = ['shield', 'magnet', 'jump', 'double'];
 
 function obstacle(name, x, z) {
   const c = CATALOG[name];
@@ -49,7 +50,11 @@ function makeRow(rng, z) {
   }
   const coinLane = lanes[blockCount];
   if (lowLanes.has(coinLane)) items.push(...coins(LANE_X[coinLane], 0.8, z - 3, 4));
-  else items.push(...coins(LANE_X[coinLane], 0.8, z, 5));
+  else if (rng() < 0.12) {
+    // short coin run then a power-up; z - 7 stays clear of the next row (>= 14 m away, half a bus is 4 m)
+    items.push(...coins(LANE_X[coinLane], 0.8, z, 3));
+    items.push({ type: 'powerup', name: pick(rng, POWERUP_KINDS), x: LANE_X[coinLane], y: 0.8, z: z - 7, w: 0.8, h: 0.8, d: 0.8 });
+  } else items.push(...coins(LANE_X[coinLane], 0.8, z, 5));
   return items;
 }
 

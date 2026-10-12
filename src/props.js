@@ -73,6 +73,27 @@ const BUILD = {
     box(g, 1.7, 0.9, 0.04, 0x1e3a5f, 0, 2.3, -4.01); // front glass
     for (const x of [-0.85, 0.85]) for (const z of [-2.8, 2.8]) wheel(g, 0.4, 0.3, x, 0.4, z);
   },
+  // Power-ups: ~0.8 tall, bottom at 0, glowing so they read at speed.
+  shield(g) {
+    add(g, new THREE.TorusGeometry(0.3, 0.07, 10, 24), 0xff70a6, 0, 0.4, 0, { emissive: 0x991848 });
+    add(g, new THREE.SphereGeometry(0.2, 16, 12), 0xffc2dc, 0, 0.4, 0, { emissive: 0xff70a6, emissiveIntensity: 0.6, transparent: true, opacity: 0.8 });
+  },
+  magnet(g) {
+    add(g, new THREE.IcosahedronGeometry(0.3, 1), 0xf4a300, 0, 0.42, 0, { flatShading: true, emissive: 0x7a4200 });
+    add(g, new THREE.CylinderGeometry(0.32, 0.26, 0.06, 20), 0xd9d9d9, 0, 0.06, 0, { metalness: 0.7, roughness: 0.3 });
+    for (const [x, y, z] of [[0.12, 0.65, -0.18], [-0.16, 0.55, -0.2], [0.02, 0.3, -0.29]]) add(g, new THREE.SphereGeometry(0.035, 6, 4), 0xfff1a8, x, y, z);
+  },
+  jump(g) {
+    add(g, new THREE.CylinderGeometry(0.17, 0.14, 0.5, 18), 0xffffff, 0, 0.25, 0, { emissive: 0x777777 });
+    add(g, new THREE.CylinderGeometry(0.2, 0.17, 0.6, 18, 1, true), 0xbfe6ff, 0, 0.3, 0, { transparent: true, opacity: 0.35, side: THREE.DoubleSide });
+    add(g, new THREE.ConeGeometry(0.14, 0.2, 12), 0x3a86ff, 0, 0.72, 0, { emissive: 0x1d4ed8 });
+  },
+  double(g) {
+    for (const x of [-0.15, 0.15]) {
+      add(g, new THREE.CylinderGeometry(0.28, 0.28, 0.07, 24), 0xffc300, x, 0.4, x, { metalness: 0.6, roughness: 0.3, emissive: 0x885500 }).rotation.x = Math.PI / 2;
+    }
+    add(g, new THREE.TorusGeometry(0.4, 0.03, 6, 24), 0xfff1a8, 0, 0.4, 0, { emissive: 0xffd60a });
+  },
   coin(g) {
     const m = add(g, new THREE.CylinderGeometry(0.3, 0.3, 0.08, 24), 0xffc300, 0, 0.3, 0,
       { metalness: 0.6, roughness: 0.3, emissive: 0x553300 });
