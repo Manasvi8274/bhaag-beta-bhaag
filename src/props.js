@@ -14,64 +14,169 @@ function add(g, geo, color, x = 0, y = 0, z = 0, extra) {
   g.add(m);
   return m;
 }
-const box = (g, w, h, d, color, x, y, z) => add(g, new THREE.BoxGeometry(w, h, d), color, x, y, z);
-const wheel = (g, r, w, x, y, z) => { add(g, new THREE.CylinderGeometry(r, r, w, 16), 0x1b1b1b, x, y, z).rotation.z = Math.PI / 2; };
+const box = (g, w, h, d, color, x, y, z, extra) => add(g, new THREE.BoxGeometry(w, h, d), color, x, y, z, extra);
+const cyl = (g, rt, rb, h, color, x, y, z, extra, seg = 12) => add(g, new THREE.CylinderGeometry(rt, rb, h, seg), color, x, y, z, extra);
+const ball = (g, r, color, x, y, z, extra) => add(g, new THREE.SphereGeometry(r, 12, 8), color, x, y, z, extra);
+const glow = (c) => ({ emissive: c, emissiveIntensity: 0.9 });
+// Tyre + hubcap, axle along x.
+function wheel(g, r, w, x, y, z) {
+  cyl(g, r, r, w, 0x1b1b1b, x, y, z, undefined, 18).rotation.z = Math.PI / 2;
+  cyl(g, r * 0.5, r * 0.5, w + 0.02, 0xb8b8b8, x, y, z, { metalness: 0.6, roughness: 0.35 }).rotation.z = Math.PI / 2;
+}
 
+// Vehicles and animals face +z, towards the player who runs down -z.
 const BUILD = {
-  stone(g) {
-    const m = add(g, new THREE.DodecahedronGeometry(0.5), 0x8d8d8d, 0, 0.25, 0, { flatShading: true });
-    m.scale.set(1.2, 0.5, 0.8);
-    for (const x of [-0.45, 0.45]) add(g, new THREE.DodecahedronGeometry(0.12), 0x777777, x, 0.1, 0.25, { flatShading: true });
+  bricks(g) { // ent ka dher: half-used pile of red bricks from a building site
+    const reds = [0xb5482a, 0xa13d22, 0xc4573a];
+    let i = 0;
+    const brick = (x, y, z, ry) => { box(g, 0.36, 0.12, 0.18, reds[i++ % 3], x, y, z).rotation.y = ry; };
+    for (const [n, y] of [[3, 0.06], [2, 0.18], [1, 0.3]]) {
+      for (let k = 0; k < n; k++) for (const z of [-0.2, 0.2]) brick((k - (n - 1) / 2) * 0.38, y, z, 0);
+    }
+    brick(0.05, 0.42, 0, 0.5);
+    brick(-0.45, 0.06, 0.32, 0.9);
+    brick(0.45, 0.06, -0.3, -0.4);
+    for (const [x, z] of [[-0.3, -0.34], [0.35, 0.34]]) add(g, new THREE.DodecahedronGeometry(0.07), 0x9a8f86, x, 0.05, z, { flatShading: true });
   },
-  pothole(g) {
-    add(g, new THREE.CylinderGeometry(0.7, 0.7, 0.06, 20), 0x3b2f25, 0, 0.03, 0);
-    add(g, new THREE.CylinderGeometry(0.58, 0.58, 0.02, 20), 0x5b4a3a, 0, 0.07, 0, { roughness: 0.2 });
-    for (const [x, z] of [[-0.6, 0.3], [0.55, -0.4], [0.2, 0.55]]) {
-      add(g, new THREE.DodecahedronGeometry(0.15), 0x9a9a9a, x, 0.15, z, { flatShading: true });
+  pothole(g) { // gaddha: muddy water, broken tar, a little warning cone
+    cyl(g, 0.66, 0.56, 0.06, 0x2b241e, 0, 0.03, 0, undefined, 20);
+    add(g, new THREE.CircleGeometry(0.5, 20), 0x6b5a45, 0, 0.065, 0, { roughness: 0.08, metalness: 0.3 }).rotation.x = -Math.PI / 2;
+    for (let i = 0; i < 7; i++) {
+      const a = i * 0.9 + 0.3, r = 0.5 + (i % 2) * 0.05;
+      add(g, new THREE.DodecahedronGeometry(0.1 + (i % 3) * 0.03), i % 2 ? 0x3d3d3d : 0x8a8a8a,
+        Math.cos(a) * r, 0.07, Math.sin(a) * r, { flatShading: true }).scale.y = 0.5;
+    }
+    cyl(g, 0.04, 0.14, 0.3, 0xff6d00, 0.42, 0.15, -0.25);
+    cyl(g, 0.075, 0.1, 0.06, 0xffffff, 0.42, 0.17, -0.25);
+  },
+  barricade(g) { // police barricade: striped planks on A-frame legs
+    for (const x of [-0.6, 0.6]) for (const z of [-0.14, 0.14]) {
+      box(g, 0.06, 0.85, 0.06, 0x555555, x, 0.42, z).rotation.x = z > 0 ? -0.3 : 0.3;
+    }
+    for (const y of [0.55, 0.78]) for (let i = 0; i < 6; i++) box(g, 0.23, 0.16, 0.05, i % 2 ? 0x111111 : 0xffd60a, -0.575 + i * 0.23, y, 0.04);
+    box(g, 0.5, 0.14, 0.06, 0x1d4ed8, 0, 0.32, 0.04); // "POLICE" board
+    box(g, 0.36, 0.04, 0.065, 0xffffff, 0, 0.32, 0.04);
+    for (const x of [-0.62, 0.62]) ball(g, 0.05, 0xff2d2d, x, 0.9, 0.04, glow(0xff0000));
+  },
+  clothesline(g) { // bamboo poles, sagging rope, kurtas, a sari and a towel
+    for (const x of [-3.2, 3.2]) cyl(g, 0.06, 0.07, 2.2, 0xc8a165, x, 1.1, 0, undefined, 8);
+    const sag = (x) => 1.55 - 0.12 * (1 - (x / 3.2) ** 2);
+    for (let i = 0; i < 8; i++) {
+      const x0 = -3.2 + i * 0.8;
+      cyl(g, 0.012, 0.012, 0.81, 0xeeeeee, x0 + 0.4, (sag(x0) + sag(x0 + 0.8)) / 2, 0, undefined, 5)
+        .rotation.z = Math.PI / 2 + Math.atan2(sag(x0 + 0.8) - sag(x0), 0.8);
+    }
+    const shirt = (x, c) => {
+      box(g, 0.42, 0.5, 0.03, c, x, 1.18, 0);
+      for (const s of [-1, 1]) box(g, 0.14, 0.26, 0.03, c, x + s * 0.27, 1.3, 0).rotation.z = s * 0.5;
+      box(g, 0.1, 0.06, 0.035, 0xd0a060, x, 1.42, 0); // peg
+    };
+    shirt(-2.4, 0xe63946); shirt(-0.4, 0x219ebc); shirt(1.9, 0x8ac926);
+    box(g, 0.75, 0.42, 0.02, 0xff70a6, -1.4, 1.22, 0); // sari with gold border
+    box(g, 0.75, 0.06, 0.025, 0xffd60a, -1.4, 1.03, 0);
+    box(g, 0.5, 0.36, 0.02, 0xffffff, 0.7, 1.24, 0).rotation.z = 0.05; // towel
+    box(g, 0.5, 0.05, 0.025, 0x219ebc, 0.7, 1.1, 0);
+    box(g, 0.36, 0.38, 0.03, 0xffb703, 2.75, 1.22, 0).rotation.z = -0.06;
+  },
+  banner(g) { // shaadi banner across the street: slide under it
+    for (const x of [-3.2, 3.2]) {
+      cyl(g, 0.07, 0.08, 2.3, 0xc8a165, x, 1.15, 0, undefined, 8);
+      ball(g, 0.1, 0xffd60a, x, 2.32, 0, glow(0xaa7700));
+    }
+    box(g, 5.6, 0.62, 0.04, 0xc1121f, 0, 1.6, 0);
+    box(g, 5.7, 0.07, 0.05, 0xffd60a, 0, 1.94, 0);
+    box(g, 5.7, 0.07, 0.05, 0xffd60a, 0, 1.27, 0);
+    for (const x of [-1.6, 0, 1.6]) box(g, 0.9, 0.22, 0.05, 0xfff1a8, x, 1.6, 0);
+    for (let i = 0; i < 22; i++) { // marigold string
+      const x = -2.75 + i * (5.5 / 21), y = 1.19 - 0.06 * Math.sin((i / 21) * Math.PI * 4) ** 2;
+      ball(g, 0.055, i % 2 ? 0xff8c00 : 0xffc300, x, y, 0.02);
     }
   },
-  clothesline(g) {
-    for (const x of [-3.2, 3.2]) add(g, new THREE.CylinderGeometry(0.06, 0.06, 2.2, 8), 0xc8a165, x, 1.1, 0);
-    add(g, new THREE.CylinderGeometry(0.015, 0.015, 6.4, 6), 0xeeeeee, 0, 1.45, 0).rotation.z = Math.PI / 2;
-    [0xe63946, 0xffb703, 0x219ebc, 0x8ac926, 0xff70a6, 0xffffff].forEach((c, i) => {
-      box(g, 0.55, 0.45, 0.03, c, -2.5 + i, 1.22, 0).rotation.z = (i % 2 ? 0.06 : -0.06);
-    });
-  },
-  cow(g) {
-    box(g, 1.0, 0.8, 1.7, 0xf2efe9, 0, 0.95, 0);
-    for (const x of [-0.36, 0.36]) for (const z of [-0.65, 0.65]) box(g, 0.18, 0.6, 0.18, 0xf2efe9, x, 0.3, z);
-    box(g, 0.45, 0.45, 0.55, 0xf2efe9, 0, 1.25, -1.05);
-    box(g, 0.3, 0.2, 0.1, 0xf4a3a8, 0, 1.12, -1.33); // nose
-    for (const x of [-0.15, 0.15]) add(g, new THREE.ConeGeometry(0.05, 0.3, 8), 0xd9c9a3, x, 1.6, -1.0);
-    box(g, 1.02, 0.4, 0.5, 0x6b4226, 0, 1.05, 0.2);
-    box(g, 0.5, 0.3, 0.4, 0x6b4226, 0.26, 1.2, -0.5);
-    box(g, 0.06, 0.6, 0.06, 0x6b4226, 0, 0.8, 0.88);
-  },
-  auto(g) {
-    box(g, 1.4, 0.8, 2.6, 0x1b9e3e, 0, 0.65, 0);
-    box(g, 1.5, 0.7, 2.0, 0xffd60a, 0, 1.65, 0.2);
-    for (const x of [-0.7, 0.7]) box(g, 0.06, 0.7, 0.06, 0x1b1b1b, x, 1.3, -0.75);
-    box(g, 1.3, 0.5, 0.04, 0x9fd8ff, 0, 1.35, -0.78); // windshield
-    box(g, 0.3, 0.12, 0.05, 0xfff3b0, 0, 0.8, -1.32); // headlight
-    wheel(g, 0.25, 0.15, 0, 0.25, -1.1);
-    for (const x of [-0.65, 0.65]) wheel(g, 0.25, 0.15, x, 0.25, 0.9);
-  },
-  cart(g) {
-    box(g, 1.4, 0.15, 2.0, 0x9c6b3e, 0, 0.85, 0);
-    for (const x of [-0.65, 0.65]) wheel(g, 0.45, 0.08, x, 0.45, 0.3);
-    for (const z of [-0.85]) for (const x of [-0.5, 0.5]) box(g, 0.08, 0.8, 0.08, 0x7a5230, x, 0.4, z);
-    const colors = [0xe63946, 0x2a9d8f, 0xf77f00];
-    for (let i = 0; i < 18; i++) {
-      const x = ((i % 3) - 1) * 0.35, z = (Math.floor(i / 3) - 2.5) * 0.3, y = 1.04 + (i % 2) * 0.12;
-      add(g, new THREE.SphereGeometry(0.12, 8, 6), colors[i % 3], x, y, z);
+  cow(g) { // white desi cow: painted horns, marigold garland, bell
+    const W = 0xf2efe9, PATCH = 0x8b5a2b;
+    add(g, new THREE.CapsuleGeometry(0.4, 1.0, 6, 12), W, 0, 1.0, -0.05).rotation.x = Math.PI / 2;
+    ball(g, 0.26, W, 0, 1.36, 0.42).scale.set(1, 0.8, 1.2); // hump
+    ball(g, 0.3, PATCH, 0.2, 1.12, -0.35).scale.set(0.75, 0.75, 1.1);
+    for (const x of [-0.24, 0.24]) for (const z of [-0.6, 0.55]) {
+      cyl(g, 0.075, 0.06, 0.6, W, x, 0.33, z);
+      cyl(g, 0.065, 0.07, 0.07, 0x3a3027, x, 0.035, z);
     }
+    box(g, 0.24, 0.42, 0.32, W, 0, 1.08, 0.86).rotation.x = -0.5; // neck
+    box(g, 0.32, 0.34, 0.46, W, 0, 1.24, 1.06).rotation.x = 0.35; // head
+    box(g, 0.28, 0.2, 0.12, 0xf4a3a8, 0, 1.12, 1.28); // muzzle
+    for (const s of [-1, 1]) {
+      ball(g, 0.04, 0x111111, s * 0.15, 1.33, 1.14);
+      box(g, 0.2, 0.06, 0.1, W, s * 0.24, 1.33, 0.98).rotation.z = s * -0.4;
+      cyl(g, 0.025, 0.055, 0.32, 0xff6d00, s * 0.11, 1.53, 0.96).rotation.z = s * -0.45;
+      cyl(g, 0.01, 0.026, 0.1, 0x1d4ed8, s * 0.19, 1.68, 0.96).rotation.z = s * -0.45;
+    }
+    add(g, new THREE.TorusGeometry(0.26, 0.05, 6, 16), 0xff8c00, 0, 1.0, 0.82).rotation.x = 1.0;
+    cyl(g, 0.05, 0.07, 0.1, 0xd4a017, 0, 0.8, 0.94, { metalness: 0.7, roughness: 0.3 });
+    cyl(g, 0.02, 0.02, 0.6, W, 0, 0.9, -1.0).rotation.x = 0.25;
+    ball(g, 0.05, 0x3a3027, 0, 0.6, -1.08);
   },
-  bus(g) {
-    box(g, 1.9, 2.7, 8, 0xd62828, 0, 1.75, 0);
-    box(g, 1.92, 0.25, 8.02, 0xf1e3c4, 0, 1.5, 0);
-    box(g, 1.92, 0.7, 7.2, 0x1e3a5f, 0, 2.4, 0.2);
-    box(g, 1.7, 0.9, 0.04, 0x1e3a5f, 0, 2.3, -4.01); // front glass
-    for (const x of [-0.85, 0.85]) for (const z of [-2.8, 2.8]) wheel(g, 0.4, 0.3, x, 0.4, z);
+  auto(g) { // auto-rickshaw: green body, yellow hood, single front wheel
+    const GREEN = 0x1b9e3e, YELLOW = 0xffd60a;
+    box(g, 1.4, 0.5, 1.6, GREEN, 0, 0.62, -0.45);
+    box(g, 1.42, 0.08, 1.62, 0xffffff, 0, 0.9, -0.45);
+    box(g, 1.1, 0.35, 0.8, 0x222222, 0, 1.0, -0.6); // seat
+    box(g, 0.62, 1.05, 0.5, GREEN, 0, 0.82, 0.9).rotation.x = 0.18; // front cowl
+    box(g, 0.9, 0.12, 0.9, GREEN, 0, 0.45, 0.45); // floor
+    ball(g, 0.1, 0xfff3b0, 0, 1.12, 1.18, glow(0xffe08a));
+    box(g, 0.3, 0.12, 0.03, 0xffffff, 0, 0.62, 1.17); // number plate
+    box(g, 1.3, 0.55, 0.04, 0x9fd8ff, 0, 1.6, 0.88, { roughness: 0.1, metalness: 0.2 }).rotation.x = -0.25;
+    box(g, 0.7, 0.04, 0.04, 0x333333, 0, 1.3, 0.72); // handlebar
+    const hood = add(g, new THREE.CylinderGeometry(0.72, 0.72, 2.0, 18), YELLOW, 0, 1.75, -0.15);
+    hood.rotation.x = Math.PI / 2; hood.scale.set(1, 1, 0.4);
+    box(g, 1.4, 0.75, 0.06, YELLOW, 0, 1.4, -1.2);
+    for (const x of [-0.68, 0.68]) box(g, 0.05, 1.0, 0.05, 0x1b1b1b, x, 1.3, 0.75);
+    wheel(g, 0.25, 0.15, 0, 0.25, 1.05);
+    for (const x of [-0.62, 0.62]) wheel(g, 0.25, 0.16, x, 0.25, -0.75);
+    for (const x of [-0.5, 0.5]) box(g, 0.18, 0.08, 0.03, 0xff2d2d, x, 0.7, -1.26, glow(0xaa0000));
+  },
+  cart(g) { // sabzi thela: wooden cart, spoked wheels, heaps of vegetables
+    const WOOD = 0x9c6b3e, DARK = 0x7a5230;
+    box(g, 1.4, 0.12, 1.9, WOOD, 0, 0.82, 0);
+    for (const x of [-0.7, 0.7]) box(g, 0.05, 0.16, 1.9, DARK, x, 0.94, 0);
+    for (const x of [-0.45, 0.45]) cyl(g, 0.03, 0.03, 0.5, DARK, x, 0.8, 1.15, undefined, 6).rotation.x = Math.PI / 2;
+    for (const x of [-0.7, 0.7]) {
+      add(g, new THREE.TorusGeometry(0.38, 0.04, 6, 18), 0x5a3a1e, x, 0.42, 0.2).rotation.y = Math.PI / 2;
+      for (let i = 0; i < 3; i++) box(g, 0.03, 0.74, 0.04, DARK, x, 0.42, 0.2).rotation.x = (i * Math.PI) / 3;
+    }
+    box(g, 0.06, 0.8, 0.06, DARK, 0, 0.4, -0.85);
+    const heap = (color, x, z, n, r) => {
+      for (let i = 0; i < n; i++) {
+        const a = i * 2.4, d = (i % 4) * r * 0.9;
+        ball(g, r, color, x + Math.cos(a) * d * 0.8, 0.94 + r + (i < 3 ? r * 1.4 : 0), z + Math.sin(a) * d);
+      }
+    };
+    heap(0xe63946, -0.35, -0.5, 9, 0.09); // tomatoes
+    heap(0xf77f00, 0.35, -0.5, 8, 0.1); // oranges
+    heap(0x6a2c70, -0.35, 0.25, 8, 0.09); // onions
+    heap(0x7cb518, 0.35, 0.25, 4, 0.16); // cabbages
+    box(g, 0.25, 0.04, 0.15, 0xc0c0c0, 0, 1.0, 0.75, { metalness: 0.7 }); // weighing pan
+  },
+  bus(g) { // red state-transport bus: windows, door, glowing destination board
+    const RED = 0xc1121f, CREAM = 0xf1e3c4, GLASS = 0x1e3a5f;
+    box(g, 1.9, 2.5, 8, RED, 0, 1.65, 0);
+    const roof = add(g, new THREE.CylinderGeometry(0.95, 0.95, 8, 16), RED, 0, 2.9, 0);
+    roof.rotation.x = Math.PI / 2; roof.scale.set(1, 1, 0.3);
+    box(g, 1.92, 0.22, 8.02, CREAM, 0, 1.45, 0);
+    box(g, 1.92, 0.06, 8.02, 0x1b1b1b, 0, 0.42, 0);
+    for (const s of [-1, 1]) {
+      box(g, 0.02, 0.75, 7.0, GLASS, s * 0.96, 2.25, -0.3, { roughness: 0.15 });
+      for (let i = 0; i < 9; i++) box(g, 0.03, 0.78, 0.08, CREAM, s * 0.965, 2.25, -3.8 + i * 0.88);
+    }
+    box(g, 0.03, 1.9, 0.75, 0x333333, -0.965, 1.4, 3.1); // door
+    box(g, 1.72, 1.0, 0.04, GLASS, 0, 2.2, 4.01, { roughness: 0.1, metalness: 0.2 });
+    box(g, 1.3, 0.24, 0.05, 0xff9f1c, 0, 2.86, 4.01, glow(0xcc6a00)); // destination board
+    box(g, 1.92, 0.25, 0.12, 0x1b1b1b, 0, 0.55, 4.02); // bumper
+    box(g, 0.9, 0.35, 0.04, 0x444444, 0, 1.0, 4.01); // grille
+    for (const x of [-0.7, 0.7]) ball(g, 0.12, 0xfff3b0, x, 1.0, 4.02, glow(0xffe08a));
+    for (const x of [-0.7, 0.7]) box(g, 0.2, 0.3, 0.05, 0xff2d2d, x, 1.0, -4.02, glow(0x880000));
+    box(g, 0.5, 0.2, 0.04, 0xffffff, 0, 0.82, 4.03);
+    for (const s of [-1, 1]) box(g, 0.06, 0.3, 0.1, 0x1b1b1b, s * 1.0, 2.2, 3.9); // mirrors
+    for (const x of [-0.85, 0.85]) for (const z of [-2.8, 2.6]) wheel(g, 0.42, 0.3, x, 0.42, z);
   },
   // Power-ups: ~0.8 tall, bottom at 0, glowing so they read at speed.
   shield(g) {

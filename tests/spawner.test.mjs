@@ -12,7 +12,7 @@ test('catalog', () => {
   assert.deepEqual(CATALOG.cow, { kind: 'block', w: 1.2, h: 1.6, d: 2.4, y: 0 });
   assert.equal(CATALOG.clothesline.kind, 'high');
   assert.equal(CATALOG.clothesline.y, 1.0);
-  assert.deepEqual(Object.keys(CATALOG).sort(), ['auto', 'bus', 'cart', 'clothesline', 'cow', 'pothole', 'stone']);
+  assert.deepEqual(Object.keys(CATALOG).sort(), ['auto', 'banner', 'barricade', 'bricks', 'bus', 'cart', 'clothesline', 'cow', 'pothole']);
 });
 
 const rowsOf = (items) => {
@@ -56,11 +56,11 @@ test('every row is passable and items are well formed', () => {
   for (const [z, obs] of rowsOf(items)) {
     const blocked = new Set(obs.filter(o => o.kind === 'block').map(o => o.x));
     assert.ok(blocked.size <= 2, `row ${z} fully blocked`);
-    const lanes = obs.filter(o => o.name !== 'clothesline').map(o => o.x);
+    const lanes = obs.filter(o => o.kind !== 'high').map(o => o.x);
     assert.equal(new Set(lanes).size, lanes.length, `row ${z} two obstacles in one lane`);
   }
   // coins never overlap an obstacle in their lane (blocks or low ones)
-  const solid = items.filter(i => i.type === 'obstacle' && i.name !== 'clothesline');
+  const solid = items.filter(i => i.type === 'obstacle' && i.kind !== 'high');
   const ups = items.filter(i => i.type === 'powerup');
   assert.equal(new Set(ups.map(u => u.name)).size, 4, 'all power-ups appear');
   assert.ok(ups.length > 20 && ups.length < 200, `power-ups ${ups.length}`);
@@ -70,5 +70,5 @@ test('every row is passable and items are well formed', () => {
     }
   }
   const types = new Set(items.filter(i => i.type === 'obstacle').map(i => i.name));
-  assert.equal(types.size, 7, 'all obstacle types appear');
+  assert.equal(types.size, 9, 'all obstacle types appear');
 });

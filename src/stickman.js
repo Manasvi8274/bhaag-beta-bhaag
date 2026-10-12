@@ -64,7 +64,12 @@ function addAccessories(type, group, j) {
     mesh(new THREE.CylinderGeometry(0.19, 0.22, 0.45, 16), white, j.pelvis, 0, 0.3, 0);
     mesh(new THREE.SphereGeometry(0.22, 16, 12), white, j.pelvis, 0, 0.18, -0.07);
     mesh(new THREE.BoxGeometry(0.2, 0.04, 0.05), BLACK, j.head, 0, -0.06, -0.19);
-    mesh(new THREE.BoxGeometry(0.1, 0.03, 0.26), mat(0x7a4a21), j.elbowR, 0, -0.32, -0.05);
+    // Hawai chappal gripped by the heel, sticking out past the fist so it reads from behind
+    const chappal = joint(j.elbowR, 0, -0.36, 0);
+    mesh(new THREE.SphereGeometry(0.075, 10, 8), BLACK, chappal); // fist
+    const sole = mesh(new THREE.BoxGeometry(0.19, 0.44, 0.04), mat(0xf5f5f0), chappal, 0, -0.24, 0);
+    mesh(new THREE.BoxGeometry(0.2, 0.45, 0.03), mat(0x1d4ed8), sole, 0, 0, 0.032);
+    for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(0.03, 0.17, 0.035), mat(0x1d4ed8), sole, s * 0.05, 0.1, -0.035).rotation.z = s * 0.45;
   }
   return skin;
 }
@@ -72,7 +77,7 @@ function addAccessories(type, group, j) {
 const KEYS = ['hipL.x', 'hipR.x', 'kneeL.x', 'kneeR.x', 'shoulderL.x', 'shoulderR.x', 'elbowL.x', 'elbowR.x',
   'pelvis.x', 'pelvis.z', 'head.x', 'pelvis.y', 'body.y'];
 
-function targets(mode, s, t, phase) {
+function targets(mode, s, t, phase, type) {
   const o = { 'pelvis.y': 0.95, 'body.y': 0 }; // any key not set means 0
   const pair = (name, v) => { o[name + 'L.x'] = v; o[name + 'R.x'] = v; };
   const run = () => {
@@ -90,6 +95,10 @@ function targets(mode, s, t, phase) {
     case 'caught': pair('hip', 0.6 * Math.sin(t * 14)); pair('knee', -0.8); pair('shoulder', 2.6 + 0.5 * Math.sin(t * 16)); pair('elbow', 0.5); o['pelvis.x'] = 0.3; break;
     case 'spank': pair('elbow', 0.5); o['shoulderR.x'] = 2.6 + 0.9 * Math.sin(t * 16); o['elbowR.x'] = 0.8; o['shoulderL.x'] = 0.5; o['pelvis.x'] = -0.15; break;
   }
+  if (type === 'papa' && mode === 'run') { // chappal raised overhead, shaking it at Beta
+    o['shoulderR.x'] = 2.9 + 0.35 * Math.sin(t * 11);
+    o['elbowR.x'] = 0.5 + 0.5 * Math.sin(t * 11 + 0.6);
+  }
   return o;
 }
 
@@ -106,7 +115,7 @@ export function createStickman(type) {
     update(dt, speed = 10) {
       t += dt;
       phase += dt * (6 + speed * 0.35);
-      const tg = targets(mode, Math.sin(phase), t, phase);
+      const tg = targets(mode, Math.sin(phase), t, phase, type);
       const k = Math.min(1, dt * 15);
       for (const key of KEYS) {
         const [name, axis] = key.split('.');
