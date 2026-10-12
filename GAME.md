@@ -7,7 +7,7 @@ remote; Papa chases him through Indian streets with a chappal. Target: PWA + And
 - 3 lanes (x = -2, 0, +2). Player runs toward -Z; camera behind and above.
 - Swipe/arrow left-right: change lane. Up/space: jump. Down: slide (roll).
 - Speed starts 10 u/s, rises to 28 u/s over time.
-- Obstacles: stone/pothole (jump), clothesline/banner (slide), cow/auto-rickshaw/cart (change lane),
+- Obstacles: bricks/pothole/barricade (jump), shaadi banner (slide), cow/auto-rickshaw/cart (change lane),
   bus/truck (change lane or ride on top via ramp - later).
 - Hitting an obstacle side-on or a low obstacle = STUMBLE: Papa closes in. A second stumble
   within 6 s = CAUGHT. Head-on hit into a tall obstacle = CAUGHT immediately.

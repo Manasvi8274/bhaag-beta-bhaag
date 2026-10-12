@@ -10,9 +10,9 @@ test('rng deterministic and in range', () => {
 
 test('catalog', () => {
   assert.deepEqual(CATALOG.cow, { kind: 'block', w: 1.2, h: 1.6, d: 2.4, y: 0 });
-  assert.equal(CATALOG.clothesline.kind, 'high');
-  assert.equal(CATALOG.clothesline.y, 1.0);
-  assert.deepEqual(Object.keys(CATALOG).sort(), ['auto', 'banner', 'barricade', 'bricks', 'bus', 'cart', 'clothesline', 'cow', 'pothole']);
+  assert.equal(CATALOG.banner.kind, 'high');
+  assert.equal(CATALOG.banner.y, 1.0);
+  assert.deepEqual(Object.keys(CATALOG).sort(), ['auto', 'banner', 'barricade', 'bricks', 'bus', 'cart', 'cow', 'pothole']);
 });
 
 const rowsOf = (items) => {
@@ -70,5 +70,5 @@ test('every row is passable and items are well formed', () => {
     }
   }
   const types = new Set(items.filter(i => i.type === 'obstacle').map(i => i.name));
-  assert.equal(types.size, 9, 'all obstacle types appear');
+  assert.equal(types.size, 8, 'all obstacle types appear');
 });

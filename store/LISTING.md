@@ -14,7 +14,7 @@ Beta broke the TV remote. Papa has a chappal. RUN through India's crazy streets!
 Uh-oh! Beta broke the TV remote right before Papa's cricket match… and now Papa is coming with the CHAPPAL! 🩴
 
 Run, jump and slide through colourful Indian galis in this hilarious endless runner. Dodge holy cows, auto-rickshaws,
-sabzi thelas and buses, duck under clotheslines, and leap over potholes. Trip once and Papa gets closer. Trip twice… PAKDE GAYE!
+sabzi thelas and buses, duck under shaadi banners, and leap over potholes. Trip once and Papa gets closer. Trip twice… PAKDE GAYE!
 
 🏃 **Swipe to survive** – left/right to switch lanes, up to jump, down to slide.
 🛡️ **Desi power-ups**

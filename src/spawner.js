@@ -11,7 +11,6 @@ export const CATALOG = {
   bricks: { kind: 'low', w: 1.2, h: 0.5, d: 0.8, y: 0 },
   barricade: { kind: 'low', w: 1.4, h: 0.9, d: 0.5, y: 0 },
   pothole: { kind: 'low', w: 1.4, h: 0.3, d: 1.2, y: 0 },
-  clothesline: { kind: 'high', w: 6.4, h: 0.3, d: 0.3, y: 1.0 },
   banner: { kind: 'high', w: 6.4, h: 0.3, d: 0.3, y: 1.0 },
   cow: { kind: 'block', w: 1.2, h: 1.6, d: 2.4, y: 0 },
   auto: { kind: 'block', w: 1.6, h: 2.0, d: 2.8, y: 0 },
@@ -22,7 +21,6 @@ export const CATALOG = {
 const LANE_X = [-2, 0, 2];
 const BLOCKS = ['cow', 'auto', 'cart', 'bus'];
 const LOWS = ['bricks', 'pothole', 'barricade'];
-const HIGHS = ['clothesline', 'banner'];
 export const POWERUP_KINDS = ['shield', 'magnet', 'jump', 'double'];
 
 function obstacle(name, x, z) {
@@ -39,7 +37,7 @@ function coins(x, y, z, count) {
 function makeRow(rng, z) {
   const items = [];
   if (rng() < 0.15) {
-    items.push(obstacle(pick(rng, HIGHS), 0, z));
+    items.push(obstacle('banner', 0, z));
     items.push(...coins(pick(rng, LANE_X), 0.4, z, 4));
     return items;
   }

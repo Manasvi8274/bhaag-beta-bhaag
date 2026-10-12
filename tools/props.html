@@ -15,7 +15,7 @@ Object.assign(sun.shadow.camera, { left: -20, right: 20, top: 20, bottom: -20 })
 const ground = new THREE.Mesh(new THREE.PlaneGeometry(80, 80), new THREE.MeshStandardMaterial({ color: 0x555b63 }));
 ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
 const layout = [['bus', -8, -6], ['auto', -4, -1], ['cow', -1.5, -1], ['cart', 1.5, -1], ['bricks', 4, 0], ['pothole', 6, 0],
-  ['barricade', -5, 4], ['clothesline', 0, -8], ['banner', 3, 5]];
+  ['barricade', -5, 4], ['banner', 3, 5]];
 for (const [n, x, z] of layout) { const p = createProp(n); p.position.set(x, 0, z); p.rotation.y = 0.5; scene.add(p); }
 const papa = createStickman('papa'); papa.group.position.set(-1.5, 0, 4); papa.group.rotation.y = q.has('back') ? 0 : Math.PI * 0.8; scene.add(papa.group);
 papa.setMode(q.get('papa') || 'run'); for (let i = 0; i < 9; i++) papa.update(0.05, 12);

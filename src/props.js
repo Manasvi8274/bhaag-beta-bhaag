@@ -58,26 +58,6 @@ const BUILD = {
     box(g, 0.36, 0.04, 0.065, 0xffffff, 0, 0.32, 0.04);
     for (const x of [-0.62, 0.62]) ball(g, 0.05, 0xff2d2d, x, 0.9, 0.04, glow(0xff0000));
   },
-  clothesline(g) { // bamboo poles, sagging rope, kurtas, a sari and a towel
-    for (const x of [-3.2, 3.2]) cyl(g, 0.06, 0.07, 2.2, 0xc8a165, x, 1.1, 0, undefined, 8);
-    const sag = (x) => 1.55 - 0.12 * (1 - (x / 3.2) ** 2);
-    for (let i = 0; i < 8; i++) {
-      const x0 = -3.2 + i * 0.8;
-      cyl(g, 0.012, 0.012, 0.81, 0xeeeeee, x0 + 0.4, (sag(x0) + sag(x0 + 0.8)) / 2, 0, undefined, 5)
-        .rotation.z = Math.PI / 2 + Math.atan2(sag(x0 + 0.8) - sag(x0), 0.8);
-    }
-    const shirt = (x, c) => {
-      box(g, 0.42, 0.5, 0.03, c, x, 1.18, 0);
-      for (const s of [-1, 1]) box(g, 0.14, 0.26, 0.03, c, x + s * 0.27, 1.3, 0).rotation.z = s * 0.5;
-      box(g, 0.1, 0.06, 0.035, 0xd0a060, x, 1.42, 0); // peg
-    };
-    shirt(-2.4, 0xe63946); shirt(-0.4, 0x219ebc); shirt(1.9, 0x8ac926);
-    box(g, 0.75, 0.42, 0.02, 0xff70a6, -1.4, 1.22, 0); // sari with gold border
-    box(g, 0.75, 0.06, 0.025, 0xffd60a, -1.4, 1.03, 0);
-    box(g, 0.5, 0.36, 0.02, 0xffffff, 0.7, 1.24, 0).rotation.z = 0.05; // towel
-    box(g, 0.5, 0.05, 0.025, 0x219ebc, 0.7, 1.1, 0);
-    box(g, 0.36, 0.38, 0.03, 0xffb703, 2.75, 1.22, 0).rotation.z = -0.06;
-  },
   banner(g) { // shaadi banner across the street: slide under it
     for (const x of [-3.2, 3.2]) {
       cyl(g, 0.07, 0.08, 2.3, 0xc8a165, x, 1.15, 0, undefined, 8);
