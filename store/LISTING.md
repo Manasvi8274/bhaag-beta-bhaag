@@ -56,7 +56,7 @@ Every Indian kid knows this chase. How far can YOU run before Papa catches you?
 3. Test on a phone: enable USB debugging, press ▶ Run.
 4. **Build → Generate Signed App Bundle → Android App Bundle**, create a new keystore (BACK IT UP — you can never update the app without it), build `release`.
 5. Play Console → Create app → upload the `.aab` to *Internal testing* first, fill the listing from this file, then promote to Production.
-6. Before the first real release: do the **AdMob setup** below (the build currently shows Google's TEST ads, which earn nothing).
+6. Before the first real release: do the **AdMob setup** above (the build currently shows Google's TEST ads, which earn nothing).
 7. For every update: bump `versionCode` / `versionName` in `android/app/build.gradle` and `VERSION` in `sw.js`.
 
 ## Web version (optional, free)
