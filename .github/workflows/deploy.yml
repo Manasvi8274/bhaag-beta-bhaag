@@ -42,4 +42,4 @@ jobs:
         run: |
           gh release delete latest --yes --cleanup-tag || true
           gh release create latest BhaagBetaBhaag.apk --title "Bhaag Beta Bhaag! (latest build)" \
-            --notes "Android APK built from ${GITHUB_SHA::7}. Download on your phone, open it and allow 'Install unknown apps'. Ads are Google test ads."
+            --notes "Android APK built from ${GITHUB_SHA::7}. Download on your phone, open it and allow 'Install unknown apps'. Uses live AdMob ads: never tap your own ads (register your phone as an AdMob test device)."

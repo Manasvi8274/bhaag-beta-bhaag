@@ -5,5 +5,5 @@
     <string name="package_name">com.bhaagbeta.game</string>
     <string name="custom_url_scheme">com.bhaagbeta.game</string>
     <!-- Google's TEST AdMob App ID. Replace with your own before release (see src/ads.js). -->
-    <string name="admob_app_id">ca-app-pub-3940256099942544~3347511713</string>
+    <string name="admob_app_id">ca-app-pub-5362485112066096~6880526046</string>
 </resources>

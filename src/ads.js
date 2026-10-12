@@ -1,9 +1,9 @@
 // Rewarded ads via @capacitor-community/admob (Android app only; on the web `available` is false).
-// BEFORE RELEASE: replace rewardedId with your own AdMob ad unit, set testing: false, and put your
-// AdMob App ID in android/app/src/main/res/values/strings.xml (admob_app_id). Until then Google's test ads show.
+// Live AdMob IDs (App ID is in android/app/src/main/res/values/strings.xml). To test without risking the account,
+// add your phone under AdMob > Settings > Test devices, or set testing: true (Google test ads).
 export const AD_CONFIG = {
-  rewardedId: 'ca-app-pub-3940256099942544/5224354917', // Google's official TEST rewarded unit
-  testing: true,
+  rewardedId: 'ca-app-pub-5362485112066096/2182558124', // "Escape Papa" rewarded unit
+  testing: false,
 };
 
 const EV = { rewarded: 'onRewardedVideoAdReward', dismissed: 'onRewardedVideoAdDismissed', failedToShow: 'onRewardedVideoAdFailedToShow' };

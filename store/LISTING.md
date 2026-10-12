@@ -41,7 +41,7 @@ Every Indian kid knows this chase. How far can YOU run before Papa catches you?
 ## AdMob setup (to earn money)
 1. Create a free account at admob.google.com → *Apps → Add app* (Android, "not published yet" is fine) → copy the **App ID** (`ca-app-pub-…~…`).
 2. In that app: *Ad units → Rewarded* → name it "Escape Papa" → copy the **Ad unit ID** (`ca-app-pub-…/…`).
-3. Put the App ID in `android/app/src/main/res/values/strings.xml` (`admob_app_id`) and the ad unit ID in `src/ads.js` (`rewardedId`), set `testing: false`.
+3. ✅ Done (live IDs set). Put the App ID in `android/app/src/main/res/values/strings.xml` (`admob_app_id`) and the ad unit ID in `src/ads.js` (`rewardedId`), set `testing: false`.
 4. `npm run android`, rebuild. Never tap your own live ads — use test mode while developing or AdMob can suspend the account.
 5. After publishing, link the Play listing in AdMob and add `app-ads.txt` to your developer website if you have one.
 
