@@ -40,3 +40,13 @@ remote; Papa chases him through Indian streets with a chappal. Target: PWA + And
 | src/world.js | street segments, buildings, recycling | THREE |
 | src/game.js | ties everything, main loop | THREE |
 | src/ui.js | HUD + menus (DOM) | DOM |
+
+## Roadmap to a sellable release
+1. Playable core: run, lanes, jump, slide, obstacles, coins, Papa chase, caught scene, menus. (in progress)
+2. Juice: camera shake, dust particles, coin pickup sparkle + sound, speed lines, screen flash on stumble.
+3. Audio: procedural WebAudio SFX (jump, slide, coin, stumble, chappal smack), looping dhol-style beat, mute toggle.
+4. Power-ups: Mummy's shield (one free hit), Dadi's ladoo magnet (pull coins), cycle (5 s invincible speed), doodh glass super-jump.
+5. Variety: zones (gali -> sabzi mandi -> school road), day/evening lighting, ramps + ride on bus roofs, rotating banners.
+6. Meta: missions (collect 100 coins, slide 10 times), coin shop (outfits/caps for Beta, chappal skins for Papa), daily reward.
+7. Polish: pause menu, settings (sound, vibration via navigator.vibrate), tutorial on first run, loading screen.
+8. Store: PWA manifest + service worker (offline), icons, Capacitor Android build, privacy policy page, store listing + screenshots.

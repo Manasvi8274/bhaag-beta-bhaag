@@ -80,10 +80,11 @@ const BUILD = {
   },
 };
 
+// Built once per name, then cloned: clones share geometry, so spawning thousands never leaks GPU memory.
+const templates = new Map();
 export function createProp(name) {
   const build = BUILD[name];
   if (!build) throw new Error(`Unknown prop: ${name}`);
-  const g = new THREE.Group();
-  build(g);
-  return g;
+  if (!templates.has(name)) { const g = new THREE.Group(); build(g); templates.set(name, g); }
+  return templates.get(name).clone();
 }

@@ -40,7 +40,7 @@ export function startGame(canvas, uiRoot) {
   const papa = createStickman('papa');
   scene.add(beta.group, papa.group);
 
-  let world = createWorld(scene, 1);
+  const world = createWorld(scene, 1);
   let state = 'menu';
   let best = loadBest();
   let run = null;
@@ -49,8 +49,7 @@ export function startGame(canvas, uiRoot) {
 
   function clearRun() {
     if (run) for (const it of run.items) scene.remove(it.mesh);
-    for (const s of world.segments) scene.remove(s);
-    world = createWorld(scene, (Math.random() * 1e9) | 0);
+    world.reset();
   }
 
   function begin() {
@@ -165,8 +164,8 @@ export function startGame(canvas, uiRoot) {
     beta.group.rotation.y = -0.35;
     papa.group.position.set(0.9, 0, 0.8);
     papa.group.rotation.y = 0.35;
-    camera.position.set(Math.sin(t * 0.2) * 0.6, 1.9, -4.6);
-    camera.lookAt(0, 1.1, 0);
+    camera.position.set(Math.sin(t * 0.2) * 0.6, 1.6, -5.2);
+    camera.lookAt(0, 1.25, 0);
   }
 
   function resize() {
@@ -181,6 +180,7 @@ export function startGame(canvas, uiRoot) {
 
   const clock = new THREE.Clock();
   ui.showMenu(best);
+  if (location.hash === '#play') begin(); // dev/screenshot shortcut
   renderer.setAnimationLoop(() => {
     const dt = Math.min(clock.getDelta(), 1 / 30);
     if (state === 'menu') menuScene(clock.elapsedTime);
