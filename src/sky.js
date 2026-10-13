@@ -1,5 +1,6 @@
 import * as THREE from '../vendor/three.module.js';
 import { mulberry32 } from './spawner.js';
+import { mergeStatic } from './merge.js';
 
 // Gradient sky dome + stars, sun, moon and a few patang (kites). Follows the camera, so it is always "infinitely" far.
 const radial = (size, power) => {
@@ -74,8 +75,26 @@ export function createSky(scene) {
     return k;
   });
 
+  // Low-poly clouds: puffs merged into one mesh, slowly drifting round; tinted by the sun, grey in the rain.
+  const cloudMat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, fog: false, depthWrite: false });
+  const puffs = new THREE.Group(), puffGeo = new THREE.IcosahedronGeometry(1, 1);
+  for (let i = 0; i < 14; i++) {
+    // mostly ahead, down the street (-z), low enough to show in the strip of sky between the buildings
+    const a = -Math.PI / 2 + (rng() - 0.5) * 2.2, r = 110 + rng() * 40, y = 16 + rng() * 16, n = 3 + Math.floor(rng() * 3);
+    for (let k = 0; k < n; k++) {
+      const m = new THREE.Mesh(puffGeo, cloudMat);
+      const sz = 5 + rng() * 4.5;
+      m.scale.set(sz * 1.4, sz * 0.7, sz);
+      m.position.set(Math.cos(a) * r + (k - n / 2) * sz * 1.3, y + rng() * 3, Math.sin(a) * r + (rng() - 0.5) * 8);
+      puffs.add(m);
+    }
+  }
+  const clouds = mergeStatic(puffs);
+  clouds.children.forEach((c) => { c.renderOrder = -7; });
+  group.add(clouds);
+
   scene.add(group);
-  const tmp = new THREE.Color();
+  const tmp = new THREE.Color(), CLOUD_DAY = new THREE.Color(0xffffff);
   return {
     // s = skyAt(t)
     update(camera, s, t) {
@@ -83,6 +102,9 @@ export function createSky(scene) {
       dome.material.uniforms.top.value.setHex(s.top);
       dome.material.uniforms.horizon.value.setHex(s.horizon);
       starMat.opacity = s.night ** 2;
+      clouds.rotation.y = Math.sin(t * 0.01) * 0.25; // drift to and fro, staying ahead
+      cloudMat.color.lerpColors(CLOUD_DAY, tmp.setHex(s.horizon), 0.45); // sunset-pink clouds, grey in the rain
+      cloudMat.opacity = 0.92 - s.night * 0.75;
       stars.rotation.y = t * 0.004;
       sun.disc.material.color.copy(tmp.setHex(s.sunColor)).lerp(WHITE, 0.4);
       sun.halo.material.color.setHex(s.sunColor);
