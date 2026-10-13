@@ -139,6 +139,17 @@ const BUILD = {
     cyl(g, 0.07, 0.07, 0.42, 0xc68642, 0, 0.07, 0).rotation.z = Math.PI / 2;
     for (const s of [-1, 1]) cyl(g, 0.03, 0.03, 0.12, 0x8b5a2b, s * 0.27, 0.07, 0).rotation.z = Math.PI / 2;
   },
+  phatak(g) { // railway level-crossing boom across the road: red/white stripes, weighted post, blinking lamps
+    box(g, 0.5, 1.4, 0.5, 0x555555, -3.2, 0.7, 0); // post with the counterweight
+    box(g, 0.6, 0.35, 0.35, 0x222222, -3.2, 1.2, 0);
+    for (let i = 0; i < 12; i++) box(g, 0.53, 0.18, 0.08, i % 2 ? 0xffffff : 0xd62828, -2.9 + i * 0.53, 1.15, 0);
+    cyl(g, 0.03, 0.03, 1.1, 0x555555, 3.2, 0.55, 0, undefined, 6); // rest on the far side
+    box(g, 0.2, 0.08, 0.2, 0x555555, 3.2, 1.1, 0);
+    for (const x of [-1.6, 1.6]) ball(g, 0.07, 0xff2d2d, x, 1.32, 0.02, glow(0xff0000));
+    box(g, 0.9, 0.5, 0.05, 0xffd60a, -3.2, 1.75, 0.2); // warning board
+    box(g, 0.75, 0.08, 0.06, 0x1b1b1b, -3.2, 1.75, 0.2).rotation.z = 0.6;
+    box(g, 0.75, 0.08, 0.06, 0x1b1b1b, -3.2, 1.75, 0.2).rotation.z = -0.6;
+  },
   banner(g) { // shaadi banner across the street: slide under it
     for (const x of [-3.2, 3.2]) {
       cyl(g, 0.07, 0.08, 2.3, 0xc8a165, x, 1.15, 0, undefined, 8);

@@ -14,6 +14,7 @@ export const CATALOG = {
   barricade: { kind: 'low', w: 1.4, h: 0.9, d: 0.5, y: 0 },
   pothole: { kind: 'low', w: 1.4, h: 0.3, d: 1.2, y: 0 },
   banner: { kind: 'high', w: 6.4, h: 0.3, d: 0.3, y: 1.0 },
+  phatak: { kind: 'high', w: 6.4, h: 0.3, d: 0.3, y: 1.0 }, // railway gate boom: slide under it
   cow: { kind: 'block', w: 1.2, h: 1.6, d: 2.4, y: 0 },
   auto: { kind: 'block', w: 1.6, h: 2.0, d: 2.8, y: 0 },
   cart: { kind: 'block', w: 1.4, h: 1.3, d: 2.0, y: 0 },
@@ -41,9 +42,9 @@ function coins(x, y, z, count) {
 }
 
 function makeRow(rng, z) {
-  const items = [], { blocks, lows } = ZONES[zoneAt(z)];
+  const items = [], { blocks, lows, high } = ZONES[zoneAt(z)];
   if (rng() < 0.15) {
-    items.push(obstacle('banner', 0, z));
+    items.push(obstacle(high, 0, z));
     items.push(...coins(pick(rng, LANE_X), 0.4, z, 4));
     return items;
   }
