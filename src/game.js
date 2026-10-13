@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.js';
-import { SPEED_START, SPEED_MAX, SPEED_RAMP, LANES, VERSION } from './config.js';
+import { SPEED_START, SPEED_MAX, SPEED_RAMP, LANES, VERSION, CHASER_FAR } from './config.js';
 import { createPlayer, applyAction, updatePlayer, getHitbox } from './player.js';
 import { aabbOverlap, firstHit, groundAt } from './collision.js';
 import { createSpawner, spawnUntil } from './spawner.js';
@@ -437,7 +437,8 @@ export function startGame(canvas, uiRoot) {
     for (const m of progress.liveMissions(run.stats)) { ui.toast(`🎯 Mission done: ${m.text}`); audio.play('powerup'); }
     ui.setScore(run.score, run.coins, run.mult);
     ui.setPowerups(listActive(run.pu));
-    beta.setMode(run.riding ? 'ride' : run.stumbleT > 0 ? 'stumble' : !p.grounded ? 'jump' : p.sliding ? 'slide' : 'run');
+    const glance = run.chaser.distance < CHASER_FAR && Math.sin(run.t * 1.7) > 0.85; // Papa is close: look back now and then
+    beta.setMode(run.riding ? 'ride' : run.stumbleT > 0 ? 'stumble' : !p.grounded ? 'jump' : p.sliding ? 'slide' : glance ? 'look' : 'run');
     papa.setMode('run');
     run.papaZ = ease(run.papaZ, run.chaser.distance, run.t < 2 ? 1 : 4, dt);
     run.papaX = ease(run.papaX, p.x + (p.x < 0 ? -0.85 : 0.85), 3, dt); // half a lane outside, so he never hides Beta

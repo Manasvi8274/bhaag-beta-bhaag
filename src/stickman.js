@@ -75,7 +75,7 @@ function addAccessories(type, group, j) {
 }
 
 const KEYS = ['hipL.x', 'hipR.x', 'kneeL.x', 'kneeR.x', 'shoulderL.x', 'shoulderR.x', 'elbowL.x', 'elbowR.x',
-  'pelvis.x', 'pelvis.z', 'head.x', 'pelvis.y', 'body.y'];
+  'pelvis.x', 'pelvis.z', 'head.x', 'head.ry', 'pelvis.y', 'body.y'];
 
 function targets(mode, s, t, phase, type) {
   const o = { 'pelvis.y': 0.95, 'body.y': 0 }; // any key not set means 0
@@ -89,6 +89,7 @@ function targets(mode, s, t, phase, type) {
   switch (mode) {
     case 'idle': o['pelvis.y'] = 0.95 + 0.01 * Math.sin(t * 2); pair('elbow', 0.2); break;
     case 'run': run(); break;
+    case 'look': run(); o['head.ry'] = 1.3; o['head.x'] = -0.15; break; // glancing back over his shoulder at Papa
     case 'jump': pair('hip', 1.0); pair('knee', -1.6); pair('shoulder', -2.4); pair('elbow', 0.4); o['pelvis.x'] = -0.1; break;
     case 'slide': o['pelvis.y'] = 0.35; o['pelvis.x'] = 1.15; pair('hip', 0.4); pair('knee', -0.2); pair('shoulder', 1.2); pair('elbow', 0.3); break;
     case 'stumble': run(); o['pelvis.z'] = 0.35 * Math.sin(t * 25); o['head.x'] = 0.4; break;
@@ -130,6 +131,7 @@ export function createStickman(type) {
         const obj = joints[name];
         const target = tg[key] ?? 0;
         if (axis === 'y') obj.position.y += (target - obj.position.y) * k;
+        else if (axis === 'ry') obj.rotation.y += (target - obj.rotation.y) * k;
         else obj.rotation[axis] += (target - obj.rotation[axis]) * k;
       }
     },

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three.module.js';
 import { createStickman } from '../src/stickman.js';
 
-const MODES = ['idle', 'run', 'jump', 'slide', 'stumble', 'caught', 'spank'];
+const MODES = ['idle', 'run', 'look', 'jump', 'slide', 'stumble', 'caught', 'spank', 'ride'];
 const JOINTS = ['body', 'pelvis', 'head', 'shoulderL', 'shoulderR', 'elbowL', 'elbowR', 'hipL', 'hipR', 'kneeL', 'kneeR'];
 const height = (g) => { g.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(g); return b.max.y - b.min.y; };
 const settle = (m, mode, secs = 1) => { m.setMode(mode); for (let i = 0; i < secs * 60; i++) m.update(1 / 60, 12); };
@@ -25,7 +25,7 @@ for (const type of ['beta', 'papa']) {
     const m = createStickman(type);
     for (const mode of MODES) {
       settle(m, mode, 0.5);
-      m.group.traverse(o => { for (const v of [o.rotation.x, o.rotation.z, o.position.y]) assert.ok(Number.isFinite(v), `${mode} ${o.type}`); });
+      m.group.traverse(o => { for (const v of [o.rotation.x, o.rotation.y, o.rotation.z, o.position.y]) assert.ok(Number.isFinite(v), `${mode} ${o.type}`); });
     }
   });
 }
