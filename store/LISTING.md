@@ -80,7 +80,7 @@ v1.1
 ## Graphics checklist
 - [x] App icon 512×512 — `icons/icon-512.png`
 - [x] Feature graphic 1024×500 — `store/feature-graphic.png`
-- [x] Phone screenshots 1080×1920 — `store/screenshots/`
+- [x] Phone screenshots 1080×1920 — `store/screenshots/` (8 for v1.2: menu, run, night, railway, mandir, monsoon, cycle, chasers)
 
 ## Release steps (one-time setup)
 1. Install **Android Studio** (it includes the Android SDK and the JDK it needs).
