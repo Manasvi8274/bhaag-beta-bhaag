@@ -275,13 +275,17 @@ function nameTexture(text, color) {
   const c = document.createElement('canvas');
   c.width = 512; c.height = 128;
   const x = c.getContext('2d');
-  x.fillStyle = color; x.fillRect(0, 0, 512, 128);
-  x.strokeStyle = '#ffd60a'; x.lineWidth = 10; x.strokeRect(5, 5, 502, 118);
-  x.font = '800 62px "Baloo 2", "Trebuchet MS", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
-  x.lineWidth = 8; x.strokeStyle = '#1b1b1b'; x.strokeText(text, 256, 68);
-  x.fillStyle = '#fff'; x.fillText(text, 256, 68);
+  const draw = () => {
+    x.fillStyle = color; x.fillRect(0, 0, 512, 128);
+    x.strokeStyle = '#ffd60a'; x.lineWidth = 10; x.strokeRect(5, 5, 502, 118);
+    x.font = '800 62px "Baloo 2", "Trebuchet MS", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.lineWidth = 8; x.strokeStyle = '#1b1b1b'; x.strokeText(text, 256, 68);
+    x.fillStyle = '#fff'; x.fillText(text, 256, 68);
+  };
+  draw();
   const t = new THREE.CanvasTexture(c);
   t.colorSpace = THREE.SRGBColorSpace;
+  document.fonts?.ready.then(() => { draw(); t.needsUpdate = true; }); // redraw once the game font has loaded
   return t;
 }
 const ARCH_COLORS = ['#c1121f', '#1d4ed8', '#e85d04'];
