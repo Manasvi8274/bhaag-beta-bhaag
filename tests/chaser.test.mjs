@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createChaser, stumble, catchNow, updateChaser, isVisible, throwDue, THROW_AT, angryThrowDue, angryGap, ANGRY_FROM } from '../src/chaser.js';
+import { createChaser, stumble, catchNow, updateChaser, isVisible, throwDue, THROW_AT, angryThrowDue, angryGap, ANGRY_FROM, startChase, chaseActive, CHASE_TIME, CHASE_DIST } from '../src/chaser.js';
 import { STUMBLE_WINDOW, CHASER_FAR, CHASER_NEAR } from '../src/config.js';
 
 const run = (c, secs, dt = 0.1) => { for (let i = 0; i < Math.round(secs / dt); i++) updateChaser(c, dt); };
@@ -71,4 +71,19 @@ test('angry Papa: no long throws early on, then regular ones that speed up with 
   assert.equal(count(STUMBLE_WINDOW - 0.5, 5000), 0, 'not while he is right behind after a stumble');
   catchNow(c);
   assert.equal(count(30, 5000), 0);
+});
+
+test('cycle chase: closes in, throws every couple of seconds, then drops back', () => {
+  const c = createChaser();
+  run(c, 30);
+  startChase(c);
+  assert.equal(chaseActive(c), true);
+  let throws = 0, mid = 0;
+  for (let i = 0; i < CHASE_TIME * 10; i++) { updateChaser(c, 0.1); if (angryThrowDue(c, 2000)) throws++; if (i === 50) mid = c.distance; }
+  assert.equal(mid, CHASE_DIST, 'right behind during the chase');
+  assert.ok(throws >= 4 && throws <= 5, `throws ${throws}`);
+  assert.equal(chaseActive(c), false);
+  assert.equal(c.chaseFrom, c.lastStumble, 'clean escape');
+  run(c, 10);
+  assert.equal(c.distance, CHASER_FAR);
 });

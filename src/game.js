@@ -3,7 +3,7 @@ import { SPEED_START, SPEED_MAX, SPEED_RAMP, LANES, VERSION, CHASER_FAR } from '
 import { createPlayer, applyAction, updatePlayer, getHitbox } from './player.js';
 import { aabbOverlap, firstHit, groundAt } from './collision.js';
 import { createSpawner, spawnUntil } from './spawner.js';
-import { createChaser, stumble, catchNow, updateChaser, throwDue, angryThrowDue } from './chaser.js';
+import { createChaser, stumble, catchNow, updateChaser, throwDue, angryThrowDue, startChase, chaseActive } from './chaser.js';
 import { createStickman, HEROES, CHASERS } from './stickman.js';
 import { createProp, setPropsNight, addHeadlights, PROP_NAMES, buildBicycle } from './props.js';
 import { createWorld, lampForLight, LAMP_HEAD_Y } from './world.js';
@@ -26,13 +26,14 @@ const HEMI_DAY = new THREE.Color(0xffffff), HEMI_NIGHT = new THREE.Color(0x7d8fd
 const GROUND_DAY = new THREE.Color(0x8a7a66), GROUND_NIGHT = new THREE.Color(0x3a3440);
 // Each chaser: what they throw, the warning, the menu line and their taunts.
 const CHASER_INFO = {
-  papa: { throws: 'chappal', warn: '⚠️ Chappal aayi!', line: 'Papa is coming with the chappal!',
+  papa: { throws: 'chappal', warn: '⚠️ Chappal aayi!', line: 'Papa is coming with the chappal!', chase: 'Papa ne cycle utha li!', tired: 'Papa thak gaye!',
     taunts: ['Ruk ja!', 'Ruk ja nalayak!', 'Aaj nahi chhodunga!', 'Remote kahan hai?!', 'Ghar chal tu!', 'Bas ek baar haath aa!'] },
-  mummy: { throws: 'belan', warn: '⚠️ Belan aaya!', line: 'Mummy is coming with the belan!',
+  mummy: { throws: 'belan', warn: '⚠️ Belan aaya!', line: 'Mummy is coming with the belan!', chase: 'Mummy ne cycle utha li!', tired: 'Mummy thak gayi!',
     taunts: ['Ruk ja!', 'Homework kaun karega?!', 'Aaj khaana band!', 'Belan dekha hai?!', 'Ghar aa, phir batati hoon!'] },
-  dadi: { throws: 'chappal', warn: '⚠️ Dadi ki chappal!', line: 'Dadi is coming with her lathi!',
+  dadi: { throws: 'chappal', warn: '⚠️ Dadi ki chappal!', line: 'Dadi is coming with her lathi!', chase: 'Dadi ne cycle utha li!', tired: 'Dadi thak gayi!',
     taunts: ['Arre o nalayak!', 'Dadi se bhaagega?!', 'Ruk ja, kaan khichungi!', 'Hai Ram, yeh bachcha!'] },
 };
+const CHASE_EVERY = 1500, CHASE_REWARD = 50; // every 1.5 km the chaser grabs a cycle for a short, hard chase
 const CYCLE_BOOST = 1.35, SMASH_COINS = 2; // Bhaiya Ki Cycle: faster, and obstacles go flying
 const NEAR_MISS_COINS = 5, NEAR_MISS_WINDOW = 0.6; // dodged out of a vehicle's lane this recently = a near miss
 const MILESTONE = 500;
@@ -46,6 +47,7 @@ const NEWS = [
   ['📅', "Aaj ka Challenge: one street for everyone each day, reach the goal for 300 coins. Share your run with friends!"],
   ['🌧️', 'Monsoon spells with thunder, and fireworks at night'],
   ['🚲', "New power-up: Bhaiya Ki Cycle! Ride faster and smash through everything"],
+  ['🚲', 'Every 1.5 km Papa grabs a cycle and chases hard. Survive it clean for 50 coins!'],
   ['😡', 'After 1 km Papa throws his chappal from afar. Dodge close for "Bal bal bache!" coins'],
 ];
 const HINTS = [[0.8, '👈 Swipe left / right 👉'], [4.5, '👆 Swipe up to jump'], [8, '👇 Swipe down to slide']];
@@ -88,6 +90,9 @@ export function startGame(canvas, uiRoot) {
   const bike = new THREE.Group();
   const bikeWheels = buildBicycle(bike);
   bike.visible = false;
+  const chaserBike = new THREE.Group(); // the chaser's own cycle for the cycle chase
+  const chaserWheels = buildBicycle(chaserBike);
+  chaserBike.visible = false;
   for (const m of [...Object.values(heroes), ...Object.values(chasers)]) scene.add(m.group);
 
   const world = createWorld(scene, 1);
@@ -105,6 +110,7 @@ export function startGame(canvas, uiRoot) {
     papa = chasers[progress.data.chaser];
     for (const m of [...Object.values(heroes), ...Object.values(chasers)]) m.group.visible = m === beta || m === papa;
     beta.group.add(bubble, bike);
+    papa.group.add(chaserBike);
     applySkin();
     ui.setCharacters(CHARACTERS.hero[progress.data.hero].name, chaserInfo().line);
   }
@@ -164,7 +170,7 @@ export function startGame(canvas, uiRoot) {
       spawner: createSpawner(seed), chaser: createChaser(), pu: createPowerups(),
       items: [], hitSet: new Set(), coins: 0, committed: 0, score: 0, stumbleT: 0, invuln: 0,
       caughtT: 0, smackT: 0, papaZ: 3, papaX: 0, zone: 0, ground: 0, floorS: 0, pendingThrow: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
-      dodgeT: -9, dodgeFromX: 0, milestone: 0, rainStart: rainStartFor(daily ? (seed % 1000) / 1000 : Math.random()), thunderT: 3, flashT: 0, rained: false,
+      dodgeT: -9, dodgeFromX: 0, milestone: 0, nextChase: CHASE_EVERY, chasing: false, rainStart: rainStartFor(daily ? (seed % 1000) / 1000 : Math.random()), thunderT: 3, flashT: 0, rained: false,
       stats: { score: 0, coins: 0, distance: 0, jumps: 0, slides: 0, powerups: 0, dodges: 0, nearMisses: 0, areas: 1, smashes: 0, night: 0, rain: 0 },
       recorded: null, // stats already added to the lifetime records (a revived run records only what is new)
     };
@@ -433,6 +439,26 @@ export function startGame(canvas, uiRoot) {
     }
   }
 
+  // Every 1.5 km: the chaser jumps on a cycle, closes in and throws hard for a few seconds. Escape clean for coins.
+  function updateCycleChase() {
+    const c = run.chaser;
+    if (!run.chasing && -run.z >= run.nextChase && !c.caught) {
+      run.nextChase += CHASE_EVERY;
+      run.chasing = true;
+      startChase(c);
+      ui.flash(`🚲 ${chaserInfo().chase}`);
+      audio.play('tring');
+    } else if (run.chasing && !chaseActive(c)) {
+      run.chasing = false;
+      if (c.lastStumble === c.chaseFrom) {
+        run.coins += CHASE_REWARD;
+        run.stats.coins += CHASE_REWARD;
+        ui.toast(`😮‍💨 ${chaserInfo().tired} +${CHASE_REWARD} 🪙`);
+        audio.play('powerup');
+      }
+    }
+  }
+
   // Scooters ride towards Beta once he is close (a horn warns first).
   function updateMovers(dt) {
     for (const { item, mesh } of run.items) {
@@ -462,6 +488,7 @@ export function startGame(canvas, uiRoot) {
     run.t += dt;
     const zone = zoneAt(run.z);
     if (zone !== run.zone) { run.zone = zone; run.stats.areas += 1; ui.flash(`📍 ${ZONES[zone].name}`); audio.play('bell'); }
+    updateCycleChase();
     if (run.daily && !run.goalHit && -run.z >= run.goal) { run.goalHit = true; ui.flash('🎉 Challenge done!'); audio.play('powerup'); }
     if (-run.z >= (run.milestone + 1) * MILESTONE) { run.milestone += 1; ui.toast(`🏁 ${run.milestone * MILESTONE} m! Shabash!`); }
     audio.setTempo((run.speed - SPEED_START) / (SPEED_MAX - SPEED_START));
@@ -501,7 +528,7 @@ export function startGame(canvas, uiRoot) {
     ui.setPowerups(listActive(run.pu));
     const glance = run.chaser.distance < CHASER_FAR && Math.sin(run.t * 1.7) > 0.85; // Papa is close: look back now and then
     beta.setMode(run.riding ? 'ride' : run.stumbleT > 0 ? 'stumble' : !p.grounded ? 'jump' : p.sliding ? 'slide' : glance ? 'look' : 'run');
-    papa.setMode('run');
+    papa.setMode(run.chasing ? 'ride' : 'run');
     run.papaZ = ease(run.papaZ, run.chaser.distance, run.t < 2 ? 1 : 4, dt);
     run.papaX = ease(run.papaX, p.x + (p.x < 0 ? -0.85 : 0.85), 3, dt); // half a lane outside, so he never hides Beta
   }
@@ -588,6 +615,8 @@ export function startGame(canvas, uiRoot) {
     sun.target.position.set(p.x, 0, run.z - 4);
     betaLight.position.set(p.x, p.y + 3, run.z + 2.5);
     bike.visible = state === 'playing' && run.riding;
+    chaserBike.visible = state === 'playing' && run.chasing;
+    if (chaserBike.visible) for (const w of chaserWheels) w.rotation.x -= (dt * run.speed) / 0.32;
     if (bike.visible) for (const w of bikeWheels) w.rotation.x -= (dt * run.speed * CYCLE_BOOST) / 0.32;
     const caught = state === 'caught' || state === 'over';
     run.floorS = ease(run.floorS, run.ground, 5, dt); // camera rises with Beta onto a bus roof, ignores jumps

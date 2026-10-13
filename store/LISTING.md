@@ -39,6 +39,7 @@ sabzi thelas and buses, duck under shaadi banners, and leap over potholes. Trip 
 🛵 **Desi traffic** – scooter uncle riding the wrong way, sleeping street dogs, cement pipes
 🌧️ **Monsoon spells** – rain, thunder and a shiny wet road
 😡 **Angry Papa** – after 1 km he throws his chappal from afar; dodge close for "Bal bal bache!" bonus coins
+🚲 **Cycle chase** – every 1.5 km Papa grabs a cycle and comes for you: survive it clean for bonus coins
 📴 **Plays fully offline**, small download, smooth on budget phones
 🔒 No forced ads ever — watch one only if you want a second chance. No accounts, no sign-up.
 
@@ -55,7 +56,7 @@ v1.2
 • Share your run as a score card
 • 11 badges with coin rewards, and a records page
 • Monsoon rain with thunder, fireworks at night, kites by day
-• Angry Papa throws from afar after 1 km; "Bal bal bache!" near-miss coins; new missions
+• Cycle chase every 1.5 km; angry Papa throws from afar after 1 km; "Bal bal bache!" near-miss coins; new missions
 • Smoother on budget phones
 
 v1.1

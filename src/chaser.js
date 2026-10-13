@@ -22,9 +22,19 @@ export function catchNow(c) {
   c.distance = 0;
 }
 
+// Cycle chase: for CHASE_TIME seconds the chaser pedals right behind and throws every CHASE_GAP seconds.
+export const CHASE_TIME = 12, CHASE_GAP = 2.5, CHASE_DIST = 4;
+export const chaseActive = (c) => c.time < (c.chaseUntil ?? -1);
+export function startChase(c) {
+  c.chaseUntil = c.time + CHASE_TIME;
+  c.chaseFrom = c.lastStumble; // a clean escape = no new stumble by the end
+  c.nextAngry = c.time + 1.5;
+}
+
 export function updateChaser(c, dt) {
   c.time += dt;
   if (c.caught) return;
+  if (chaseActive(c)) { c.distance = Math.min(c.distance + 3 * dt, CHASE_DIST); return; }
   if (c.time - c.lastStumble > STUMBLE_WINDOW && c.distance < CHASER_FAR) {
     c.distance += 3 * dt;
     c.distance = Math.min(c.distance, CHASER_FAR);
@@ -51,6 +61,7 @@ export function angryThrowDue(c, distance) {
   if (c.caught || distance < ANGRY_FROM) return false;
   if (c.nextAngry === null) c.nextAngry = c.time + 3;
   if (c.time < c.nextAngry) return false;
-  c.nextAngry = c.time + angryGap(distance);
-  return c.time - c.lastStumble > STUMBLE_WINDOW;
+  const chasing = chaseActive(c);
+  c.nextAngry = c.time + (chasing ? CHASE_GAP : angryGap(distance));
+  return chasing || c.time - c.lastStumble > STUMBLE_WINDOW;
 }

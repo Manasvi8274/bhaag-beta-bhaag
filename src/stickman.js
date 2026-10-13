@@ -139,10 +139,10 @@ function targets(mode, s, t, phase, type) {
     }
     case 'spank': pair('elbow', 0.5); o['shoulderR.x'] = 2.6 + 0.9 * Math.sin(t * 16); o['elbowR.x'] = 0.8; o['shoulderL.x'] = 0.5; o['pelvis.x'] = -0.15; break;
   }
-  if (CHASERS.includes(type) && mode === 'run') { // weapon raised overhead, shaking it at the kid
+  if (CHASERS.includes(type) && (mode === 'run' || mode === 'ride')) { // weapon raised overhead, shaking it at the kid
     o['shoulderR.x'] = 2.9 + 0.35 * Math.sin(t * 11);
     o['elbowR.x'] = 0.5 + 0.5 * Math.sin(t * 11 + 0.6);
-    if (type === 'dadi') { o['pelvis.x'] = -0.35; o['head.x'] = 0.25; } // a bit bent, still fast
+    if (type === 'dadi' && mode === 'run') { o['pelvis.x'] = -0.35; o['head.x'] = 0.25; } // a bit bent, still fast
   }
   return o;
 }
