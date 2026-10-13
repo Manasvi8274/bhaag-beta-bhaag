@@ -29,7 +29,7 @@ const POOL = [
 export const UPGRADE_COST = [250, 600, 1200, 2500, 5000];
 export const DAILY_REWARDS = [50, 75, 100, 150, 200, 300, 500];
 const KEY = 'bbb-save-v1';
-const DEFAULTS = { coins: 0, best: 0, skin: 'classic', owned: ['classic'], muted: false, vibrate: true,
+const DEFAULTS = { coins: 0, best: 0, skin: 'classic', owned: ['classic'], muted: false, vibrate: true, voice: true,
   tutorialDone: false, level: 0, missions: null, lastDaily: null, streak: 0, challengeDone: null, badges: [], bestDistance: 0, hero: 'beta', chaser: 'papa', chars: ['beta', 'papa'] };
 
 function makeMission(level, taken) {
@@ -113,7 +113,7 @@ export function createProgress(storage) {
       }
       d[kind] = id; save(); return true;
     },
-    setSetting(key, value) { if (key === 'muted' || key === 'vibrate' || key === 'tutorialDone') { d[key] = value; save(); } },
+    setSetting(key, value) { if (['muted', 'vibrate', 'voice', 'tutorialDone'].includes(key)) { d[key] = value; save(); } },
     // Missions reached during a run, reported once each (for a mid-run toast).
     liveMissions(stats) {
       const out = d.missions.filter((m) => !m.flashed && (stats[m.stat] || 0) >= m.goal);

@@ -16,6 +16,7 @@ import { createAudio } from './audio.js';
 import { createFx, createSpeedLines } from './fx.js';
 import { createAds, createWebAds } from './ads.js';
 import { drawCard, shareRun } from './share.js';
+import { createVoice } from './voice.js';
 import { createProgress, SKINS, CHARACTERS, dailyChallenge, ACHIEVEMENTS } from './progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL, POWERUP_TIME } from './powerups.js';
 
@@ -27,11 +28,14 @@ const GROUND_DAY = new THREE.Color(0x8a7a66), GROUND_NIGHT = new THREE.Color(0x3
 // Each chaser: what they throw, the warning, the menu line and their taunts.
 const CHASER_INFO = {
   papa: { throws: 'chappal', warn: '⚠️ Chappal aayi!', line: 'Papa is coming with the chappal!', chase: 'Papa ne cycle utha li!', tired: 'Papa thak gaye!',
-    taunts: ['Ruk ja!', 'Ruk ja nalayak!', 'Aaj nahi chhodunga!', 'Remote kahan hai?!', 'Ghar chal tu!', 'Bas ek baar haath aa!'] },
+    taunts: [['Ruk ja!', 'रुक जा!'], ['Ruk ja nalayak!', 'रुक जा नालायक!'], ['Aaj nahi chhodunga!', 'आज नहीं छोड़ूँगा!'],
+      ['Remote kahan hai?!', 'रिमोट कहाँ है?'], ['Ghar chal tu!', 'घर चल तू!'], ['Bas ek baar haath aa!', 'बस एक बार हाथ आ!']] },
   mummy: { throws: 'belan', warn: '⚠️ Belan aaya!', line: 'Mummy is coming with the belan!', chase: 'Mummy ne cycle utha li!', tired: 'Mummy thak gayi!',
-    taunts: ['Ruk ja!', 'Homework kaun karega?!', 'Aaj khaana band!', 'Belan dekha hai?!', 'Ghar aa, phir batati hoon!'] },
+    taunts: [['Ruk ja!', 'रुक जा!'], ['Homework kaun karega?!', 'होमवर्क कौन करेगा?'], ['Aaj khaana band!', 'आज खाना बंद!'],
+      ['Belan dekha hai?!', 'बेलन देखा है?'], ['Ghar aa, phir batati hoon!', 'घर आ, फिर बताती हूँ!']] },
   dadi: { throws: 'chappal', warn: '⚠️ Dadi ki chappal!', line: 'Dadi is coming with her lathi!', chase: 'Dadi ne cycle utha li!', tired: 'Dadi thak gayi!',
-    taunts: ['Arre o nalayak!', 'Dadi se bhaagega?!', 'Ruk ja, kaan khichungi!', 'Hai Ram, yeh bachcha!'] },
+    taunts: [['Arre o nalayak!', 'अरे ओ नालायक!'], ['Dadi se bhaagega?!', 'दादी से भागेगा?'],
+      ['Ruk ja, kaan khichungi!', 'रुक जा, कान खींचूँगी!'], ['Hai Ram, yeh bachcha!', 'हाय राम, यह बच्चा!']] },
 };
 const CHASE_EVERY = 1500, CHASE_REWARD = 50; // every 1.5 km the chaser grabs a cycle for a short, hard chase
 const CYCLE_BOOST = 1.35, SMASH_COINS = 2; // Bhaiya Ki Cycle: faster, and obstacles go flying
@@ -47,6 +51,7 @@ const NEWS = [
   ['📅', "Aaj ka Challenge: one street for everyone each day, reach the goal for 300 coins. Share your run with friends!"],
   ['🌧️', 'Monsoon spells with thunder, and fireworks at night'],
   ['🚲', "New power-up: Bhaiya Ki Cycle! Ride faster and smash through everything"],
+  ['🗣️', 'Papa, Mummy and Dadi now shout their taunts out loud in Hindi (turn it off in pause)'],
   ['🚲', 'Every 1.5 km Papa grabs a cycle and chases hard. Survive it clean for 50 coins!'],
   ['😡', 'After 1 km Papa throws his chappal from afar. Dodge close for "Bal bal bache!" coins'],
 ];
@@ -100,6 +105,9 @@ export function startGame(canvas, uiRoot) {
   const speedLines = createSpeedLines(scene);
   const progress = createProgress(storage);
   const audio = createAudio();
+  const voice = createVoice();
+  const settings = () => ({ ...progress.data, voiceAvailable: voice.available() });
+  const shout = (text) => { if (!progress.data.muted && progress.data.voice) voice.say(text, progress.data.chaser); };
   let ads = createAds();
   if (!ads.available) ads = createWebAds(); // PWA / browser
   audio.setMuted(progress.data.muted);
@@ -125,8 +133,9 @@ export function startGame(canvas, uiRoot) {
     onStart: () => begin(false), onRestart: () => begin(run?.daily), onChallenge: () => begin(true), onPause: pauseGame, onResume: resume, onRevive: () => revive(false), onWatchAd: watchAd,
     onHome() { if (state === 'paused') finishRun(); goMenu(); },
     onMissions: () => ui.showMissions(progress.data.missions, progress.multiplier(), progress.data, ACHIEVEMENTS),
-    onSound() { progress.setSetting('muted', !progress.data.muted); audio.setMuted(progress.data.muted); ui.setSettings(progress.data); },
-    onVibrate() { progress.setSetting('vibrate', !progress.data.vibrate); ui.setSettings(progress.data); vibrate(40); },
+    onSound() { progress.setSetting('muted', !progress.data.muted); audio.setMuted(progress.data.muted); ui.setSettings(settings()); },
+    onVoice() { progress.setSetting('voice', !progress.data.voice); ui.setSettings(settings()); },
+    onVibrate() { progress.setSetting('vibrate', !progress.data.vibrate); ui.setSettings(settings()); vibrate(40); },
     onShop: () => ui.showShop(SKINS, progress.data, upgradeList(), CHARACTERS),
     onChar(kind, id) {
       const had = progress.data.chars.includes(id);
@@ -155,7 +164,7 @@ export function startGame(canvas, uiRoot) {
 
     onClaimDaily() { progress.claimDaily(today()); ui.setWallet(progress.data.coins); audio.play('powerup'); },
   });
-  ui.setSettings(progress.data);
+  ui.setSettings(settings());
   applyCharacters();
   ui.setInstallable(!!window.bbbInstall);
   window.addEventListener('bbb-install', () => ui.setInstallable(true));
@@ -192,6 +201,7 @@ export function startGame(canvas, uiRoot) {
     ui.setPowerups([]);
     ui.flash('Bhaag!');
     if (daily) ui.toast(`📅 Aaj ka Challenge: reach ${ch.goal} m!`);
+    shout(`${progress.data.hero === 'beti' ? 'बेटी' : 'बेटा'}! रुक जा!`);
     audio.startMusic();
     ads.preload(); // so the "watch ad" revive is instant at game over
   }
@@ -211,6 +221,7 @@ export function startGame(canvas, uiRoot) {
     state = 'paused';
     audio.stopMusic();
     audio.setRain(0);
+    ui.setSettings(settings()); // Hindi voices may have loaded since
     ui.showPause();
   }
 
@@ -300,6 +311,7 @@ export function startGame(canvas, uiRoot) {
     beta.setMode('caught');
     papa.setMode('spank');
     ui.flash('Pakda!');
+    shout('पकड़ लिया!');
     audio.stopMusic();
     for (const { item, mesh } of run.items) if (item.z < run.z + 2 && item.z > run.z - 9) mesh.visible = false; // clear the stage
     vibrate(250);
@@ -406,7 +418,9 @@ export function startGame(canvas, uiRoot) {
     audio.play('stumble');
     fx.burst(p.x, 0.3, run.z, 0xb5a99a, 10, { speed: 3, up: 2 });
     if (stumble(run.chaser) === 'caught') { enterCaught(); return; }
-    ui.flash(pick(chaserInfo().taunts));
+    const [shown, spoken] = pick(chaserInfo().taunts);
+    ui.flash(shown);
+    shout(spoken);
   }
 
   // Papa's chappal: a warning, then it flies down the lane Beta is in. Dodge, jump or slide; a hit is a stumble

@@ -110,6 +110,7 @@ export function createUI(root, h) {
   btn(pause, '▶ Resume', 'big', () => h.onResume());
   const pSound = btn(pause, '🔊 Sound', 'alt', () => h.onSound());
   const pVibe = btn(pause, '📳 Vibration', 'alt', () => h.onVibrate());
+  const pVoice = btn(pause, '🗣️ Voice', 'alt hidden', () => h.onVoice());
   btn(pause, '🏠 Home', 'gold', () => h.onHome());
 
   // Game over
@@ -171,7 +172,9 @@ export function createUI(root, h) {
     },
     showPause() { only(pause); },
     setAdLoading(on) { adBtn.disabled = on; revive.disabled = on || !revive.dataset.afford; adBtn.textContent = on ? '📺 Loading ad...' : '📺 Watch ad to escape'; },
-    setSettings({ muted, vibrate }) {
+    setSettings({ muted, vibrate, voice, voiceAvailable }) {
+      pVoice.classList.toggle('hidden', !voiceAvailable);
+      pVoice.textContent = `🗣️ Hindi voice ${voice ? 'On' : 'Off'}`;
       mSound.textContent = soundLabel(muted);
       pSound.textContent = `${soundLabel(muted)} Sound ${muted ? 'Off' : 'On'}`;
       pVibe.textContent = `📳 Vibration ${vibrate ? 'On' : 'Off'}`;

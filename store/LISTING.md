@@ -39,6 +39,7 @@ sabzi thelas and buses, duck under shaadi banners, and leap over potholes. Trip 
 🛵 **Desi traffic** – scooter uncle riding the wrong way, sleeping street dogs, cement pipes
 🌧️ **Monsoon spells** – rain, thunder and a shiny wet road
 😡 **Angry Papa** – after 1 km he throws his chappal from afar; dodge close for "Bal bal bache!" bonus coins
+🗣️ **They shout!** – "Ruk ja nalayak!" Papa, Mummy and Dadi yell their taunts out loud in Hindi
 🚲 **Cycle chase** – every 1.5 km Papa grabs a cycle and comes for you: survive it clean for bonus coins
 📴 **Plays fully offline**, small download, smooth on budget phones
 🔒 No forced ads ever — watch one only if you want a second chance. No accounts, no sign-up.
