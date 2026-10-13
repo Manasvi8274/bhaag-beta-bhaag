@@ -22,6 +22,7 @@ sabzi thelas and buses, duck under shaadi banners, and leap over potholes. Trip 
 • Dadi's Ladoo Magnet – coins fly straight to you
 • Doodh Power Jump – one glass of milk and you can jump over a bus!
 • Double Coins
+• Bhaiya Ki Cycle – hop on a bicycle, ride faster and smash through everything in your way
 🎯 **Missions** – finish missions to raise your score multiplier up to x10
 🛒 **Beta Ki Dukaan** – spend coins on new caps and school bags
 🎁 **Daily Inaam** – come back every day for bigger rewards
@@ -44,6 +45,7 @@ v1.2
 • Day turns to night: streetlights switch on, windows and shop signs glow, stars and moon
 • Three areas: Market Gali, Railway Colony (watch the train!) and Mandir Marg
 • New obstacles: scooter uncle, sleeping dogs, cement pipes
+• New power-up: Bhaiya Ki Cycle - ride faster and smash through everything
 • Monsoon rain with thunder, fireworks at night, kites by day
 • Angry Papa throws from afar after 1 km; "Bal bal bache!" near-miss coins; new missions
 • Smoother on budget phones

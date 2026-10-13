@@ -63,7 +63,7 @@ function btn(parent, text, cls, onClick) {
   return b;
 }
 const hex = (n) => '#' + n.toString(16).padStart(6, '0');
-const PU_ICON = { shield: '🛡️', magnet: '🟠', jump: '🥛', double: '✖2' };
+const PU_ICON = { shield: '🛡️', magnet: '🟠', jump: '🥛', double: '✖2', cycle: '🚲' };
 
 export function createUI(root, h) {
   if (!document.getElementById('bbb-ui-style')) {

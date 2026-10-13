@@ -72,7 +72,7 @@ test('every row is passable and items are well formed', () => {
   // coins never overlap an obstacle in their lane (blocks or low ones)
   const solid = items.filter(i => i.type === 'obstacle' && i.kind !== 'high');
   const ups = items.filter(i => i.type === 'powerup');
-  assert.equal(new Set(ups.map(u => u.name)).size, 4, 'all power-ups appear');
+  assert.equal(new Set(ups.map(u => u.name)).size, POWERUP_KINDS.length, 'all power-ups appear');
   assert.ok(ups.length > 20 && ups.length < 200, `power-ups ${ups.length}`);
   for (const c of items.filter(i => i.type !== 'obstacle' && i.type !== 'ramp' && i.y < 3)) { // roof coins sit on the bus
     for (const o of solid) {

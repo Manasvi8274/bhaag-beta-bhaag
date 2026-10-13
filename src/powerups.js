@@ -1,6 +1,6 @@
 // Timed power-ups. Pure.
-export const POWERUP_TIME = { shield: 15, magnet: 10, jump: 10, double: 12 };
-export const POWERUP_LABEL = { shield: "Mummy's Shield", magnet: "Dadi's Ladoo Magnet", jump: 'Doodh Power Jump', double: 'Double Coins' };
+export const POWERUP_TIME = { shield: 15, magnet: 10, jump: 10, double: 12, cycle: 8 };
+export const POWERUP_LABEL = { shield: "Mummy's Shield", magnet: "Dadi's Ladoo Magnet", jump: 'Doodh Power Jump', double: 'Double Coins', cycle: 'Bhaiya Ki Cycle' };
 
 export const createPowerups = () => ({ timers: {}, max: {} });
 

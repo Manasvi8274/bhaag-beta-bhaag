@@ -25,7 +25,7 @@ export const CATALOG = {
 
 const LANE_X = [-2, 0, 2];
 const RAMP_LEN = 6;
-export const POWERUP_KINDS = ['shield', 'magnet', 'jump', 'double'];
+export const POWERUP_KINDS = ['shield', 'magnet', 'jump', 'double', 'cycle'];
 
 function obstacle(name, x, z) {
   const c = CATALOG[name];

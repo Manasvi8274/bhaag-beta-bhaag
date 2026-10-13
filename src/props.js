@@ -62,6 +62,28 @@ function limb(g, a, b, r, color) {
   m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.sub(A).normalize());
 }
 
+// Beta's bicycle (front at -z, the way he runs): frame, saddle, handlebar; wheels returned so they can spin.
+export function buildBicycle(g) {
+  const RED = 0xd62828, INK = 0x1b1b1b, wheels = [];
+  for (const z of [-0.55, 0.5]) {
+    const w = new THREE.Group();
+    w.position.set(0, 0.34, z);
+    add(w, new THREE.TorusGeometry(0.32, 0.035, 6, 20), INK).rotation.y = Math.PI / 2;
+    for (let i = 0; i < 3; i++) box(w, 0.02, 0.6, 0.02, 0xc0c0c0, 0, 0, 0).rotation.x = (i * Math.PI) / 3;
+    g.add(w);
+    wheels.push(w);
+  }
+  limb(g, [0, 0.34, 0.5], [0, 0.55, -0.05], 0.03, RED); // chain stay to the pedals
+  limb(g, [0, 0.55, -0.05], [0, 0.92, 0.2], 0.03, RED); // seat tube
+  limb(g, [0, 0.55, -0.05], [0, 0.9, -0.42], 0.03, RED); // down tube
+  limb(g, [0, 0.92, 0.2], [0, 0.9, -0.42], 0.03, RED); // top tube
+  limb(g, [0, 0.34, -0.55], [0, 1.05, -0.45], 0.028, 0x9a9a9a); // fork
+  box(g, 0.56, 0.04, 0.04, INK, 0, 1.06, -0.45); // handlebar
+  box(g, 0.14, 0.05, 0.24, INK, 0, 0.97, 0.22); // saddle
+  ball(g, 0.06, 0xfff3b0, 0, 0.98, -0.52, glow(0xffe08a)); // lamp
+  return wheels;
+}
+
 // Vehicles and animals face +z, towards the player who runs down -z.
 const BUILD = {
   bricks(g) { // ent ka dher: half-used pile of red bricks from a building site
@@ -277,6 +299,14 @@ const BUILD = {
       add(g, new THREE.CylinderGeometry(0.28, 0.28, 0.07, 24), 0xffc300, x, 0.4, x, { metalness: 0.6, roughness: 0.3, emissive: 0x885500 }).rotation.x = Math.PI / 2;
     }
     add(g, new THREE.TorusGeometry(0.4, 0.03, 6, 24), 0xfff1a8, 0, 0.4, 0, { emissive: 0xffd60a });
+  },
+  cycle(g) { // power-up: a little glowing bicycle
+    const r = new THREE.Group();
+    r.scale.setScalar(0.5);
+    r.position.y = 0.05;
+    buildBicycle(r);
+    g.add(r);
+    add(g, new THREE.TorusGeometry(0.42, 0.03, 6, 24), 0xfff1a8, 0, 0.42, 0, { emissive: 0xffd60a });
   },
   coin(g) {
     const m = add(g, new THREE.CylinderGeometry(0.3, 0.3, 0.08, 24), 0xffc300, 0, 0.3, 0,

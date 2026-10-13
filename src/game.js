@@ -5,7 +5,7 @@ import { aabbOverlap, firstHit, groundAt } from './collision.js';
 import { createSpawner, spawnUntil } from './spawner.js';
 import { createChaser, stumble, catchNow, updateChaser, throwDue, angryThrowDue } from './chaser.js';
 import { createStickman } from './stickman.js';
-import { createProp, setPropsNight, addHeadlights, PROP_NAMES } from './props.js';
+import { createProp, setPropsNight, addHeadlights, PROP_NAMES, buildBicycle } from './props.js';
 import { createWorld, lampForLight, LAMP_HEAD_Y } from './world.js';
 import { createSky, createRain } from './sky.js';
 import { skyAt, menuTime, mix, rainAt, rainStartFor } from './daynight.js';
@@ -24,6 +24,7 @@ const LAMP_LIGHTS = 2; // real lights hopping between streetlights near Beta; th
 const HEMI_DAY = new THREE.Color(0xffffff), HEMI_NIGHT = new THREE.Color(0x7d8fd8);
 const GROUND_DAY = new THREE.Color(0x8a7a66), GROUND_NIGHT = new THREE.Color(0x3a3440);
 const TAUNTS = ['Ruk ja!', 'Ruk ja nalayak!', 'Aaj nahi chhodunga!', 'Remote kahan hai?!', 'Ghar chal tu!', 'Bas ek baar haath aa!'];
+const CYCLE_BOOST = 1.35, SMASH_COINS = 2; // Bhaiya Ki Cycle: faster, and obstacles go flying
 const NEAR_MISS_COINS = 5, NEAR_MISS_WINDOW = 0.6; // dodged out of a vehicle's lane this recently = a near miss
 const MILESTONE = 500;
 const FIREWORKS = [0xff3b3b, 0xffd60a, 0x3aff7a, 0x3a86ff, 0xff70ff, 0xffffff];
@@ -33,6 +34,7 @@ const NEWS = [
   ['🛤️', 'Three mohallas: Market Gali, Railway Colony (watch the train!), Mandir Marg'],
   ['🛵', 'New on the road: scooter uncle, sleeping dogs, cement pipes'],
   ['🌧️', 'Monsoon spells with thunder, and fireworks at night'],
+  ['🚲', "New power-up: Bhaiya Ki Cycle! Ride faster and smash through everything"],
   ['😡', 'After 1 km Papa throws his chappal from afar. Dodge close for "Bal bal bache!" coins'],
 ];
 const HINTS = [[0.8, '👈 Swipe left / right 👉'], [4.5, '👆 Swipe up to jump'], [8, '👇 Swipe down to slide']];
@@ -70,6 +72,10 @@ export function startGame(canvas, uiRoot) {
     new THREE.MeshStandardMaterial({ color: 0xff70a6, emissive: 0xff70a6, emissiveIntensity: 0.4, transparent: true, opacity: 0.22, depthWrite: false }));
   bubble.position.y = 0.95;
   beta.group.add(bubble);
+  const bike = new THREE.Group();
+  const bikeWheels = buildBicycle(bike);
+  bike.visible = false;
+  beta.group.add(bike);
   scene.add(beta.group, papa.group);
 
   const world = createWorld(scene, 1);
@@ -231,6 +237,7 @@ export function startGame(canvas, uiRoot) {
   function onAction(action) {
     if (state !== 'playing') return;
     const p = run.p, wasGrounded = p.grounded;
+    if (action === 'slide' && p.grounded && isActive(run.pu, 'cycle')) return; // no sliding on a bicycle
     if (action === 'left' || action === 'right') run.prevLane = p.lane;
     if (!applyAction(p, action)) return;
     if (action === 'left' || action === 'right') { run.stats.dodges += 1; run.dodgeT = run.t; run.dodgeFromX = LANES[run.prevLane]; }
@@ -278,14 +285,31 @@ export function startGame(canvas, uiRoot) {
         run.stats.powerups += 1;
         fx.burst(item.x, item.y + 0.4, item.z, 0xff70a6, 16, { speed: 4, up: 4 });
         ui.toast(POWERUP_LABEL[item.name] + '!');
-        audio.play('powerup');
+        audio.play(item.name === 'cycle' ? 'tring' : 'powerup');
       }
       return false;
     });
   }
 
+  // On the cycle Beta ploughs through everything: each obstacle he meets goes flying.
+  function smash(box) {
+    for (const { item, mesh } of run.items) {
+      if (item.type !== 'obstacle' || run.hitSet.has(item) || !aabbOverlap(box, item)) continue;
+      run.hitSet.add(item);
+      mesh.visible = false;
+      run.coins += SMASH_COINS;
+      run.stats.coins += SMASH_COINS;
+      fx.burst(item.x, 0.8, item.z, 0xffd60a, 14, { speed: 5, up: 5, life: 0.6 });
+      fx.burst(item.x, 0.6, item.z, 0xb5a99a, 8, { speed: 4, up: 3 });
+      audio.play('smack');
+      shake = 0.15;
+      vibrate(30);
+    }
+  }
+
   function hitObstacles(box) {
     const p = run.p;
+    if (isActive(run.pu, 'cycle')) { smash(box); return; }
     if (run.invuln > 0) return;
     const live = run.items.filter(({ item }) => item.type === 'obstacle' && !run.hitSet.has(item)).map(({ item }) => item);
     const hit = firstHit(box, live);
@@ -383,7 +407,10 @@ export function startGame(canvas, uiRoot) {
     audio.setTempo((run.speed - SPEED_START) / (SPEED_MAX - SPEED_START));
     if (run.hint < HINTS.length && run.t >= HINTS[run.hint][0]) ui.hint(HINTS[run.hint++][1]);
     run.speed = Math.min(SPEED_MAX, run.speed + SPEED_RAMP * dt);
-    run.z -= run.speed * dt;
+    const riding = isActive(run.pu, 'cycle');
+    if (run.riding && !riding) { fx.burst(p.x, 0.6, run.z, 0xd62828, 14, { speed: 4, up: 3 }); ui.toast('Cycle gayi! Ab paidal bhaago!'); }
+    run.riding = riding;
+    run.z -= run.speed * (riding ? CYCLE_BOOST : 1) * dt;
     run.ground = groundAt({ ...getHitbox(p), z: run.z }, run.items.map((it) => it.item));
     updatePlayer(p, dt, run.ground);
     updateChaser(run.chaser, dt);
@@ -410,7 +437,7 @@ export function startGame(canvas, uiRoot) {
     for (const m of progress.liveMissions(run.stats)) { ui.toast(`🎯 Mission done: ${m.text}`); audio.play('powerup'); }
     ui.setScore(run.score, run.coins, run.mult);
     ui.setPowerups(listActive(run.pu));
-    beta.setMode(run.stumbleT > 0 ? 'stumble' : !p.grounded ? 'jump' : p.sliding ? 'slide' : 'run');
+    beta.setMode(run.riding ? 'ride' : run.stumbleT > 0 ? 'stumble' : !p.grounded ? 'jump' : p.sliding ? 'slide' : 'run');
     papa.setMode('run');
     run.papaZ = ease(run.papaZ, run.chaser.distance, run.t < 2 ? 1 : 4, dt);
     run.papaX = ease(run.papaX, p.x + (p.x < 0 ? -0.85 : 0.85), 3, dt); // half a lane outside, so he never hides Beta
@@ -492,6 +519,8 @@ export function startGame(canvas, uiRoot) {
     sun.position.set(p.x + 6, 14, run.z + 4);
     sun.target.position.set(p.x, 0, run.z - 4);
     betaLight.position.set(p.x, p.y + 3, run.z + 2.5);
+    bike.visible = state === 'playing' && run.riding;
+    if (bike.visible) for (const w of bikeWheels) w.rotation.x -= (dt * run.speed * CYCLE_BOOST) / 0.32;
     const caught = state === 'caught' || state === 'over';
     run.floorS = ease(run.floorS, run.ground, 5, dt); // camera rises with Beta onto a bus roof, ignores jumps
     const camTarget = caught

@@ -93,6 +93,14 @@ function targets(mode, s, t, phase, type) {
     case 'slide': o['pelvis.y'] = 0.35; o['pelvis.x'] = 1.15; pair('hip', 0.4); pair('knee', -0.2); pair('shoulder', 1.2); pair('elbow', 0.3); break;
     case 'stumble': run(); o['pelvis.z'] = 0.35 * Math.sin(t * 25); o['head.x'] = 0.4; break;
     case 'caught': pair('hip', 0.6 * Math.sin(t * 14)); pair('knee', -0.8); pair('shoulder', 2.6 + 0.5 * Math.sin(t * 16)); pair('elbow', 0.5); o['pelvis.x'] = 0.3; break;
+    case 'ride': { // on the bicycle: seated, leaning over the handlebar, pedalling
+      const c = Math.sin(phase);
+      o['pelvis.y'] = 1.0; o['pelvis.x'] = -0.35;
+      o['hipL.x'] = 1.1 + 0.45 * c; o['hipR.x'] = 1.1 - 0.45 * c;
+      o['kneeL.x'] = -1.5 + 0.5 * c; o['kneeR.x'] = -1.5 - 0.5 * c;
+      pair('shoulder', 1.25); pair('elbow', 0.35); o['head.x'] = 0.2; // arms forward to the handlebar
+      break;
+    }
     case 'spank': pair('elbow', 0.5); o['shoulderR.x'] = 2.6 + 0.9 * Math.sin(t * 16); o['elbowR.x'] = 0.8; o['shoulderL.x'] = 0.5; o['pelvis.x'] = -0.15; break;
   }
   if (type === 'papa' && mode === 'run') { // chappal raised overhead, shaking it at Beta
