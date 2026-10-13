@@ -26,6 +26,8 @@ sabzi thelas and buses, duck under shaadi banners, and leap over potholes. Trip 
 🎯 **Missions** – finish missions to raise your score multiplier up to x10
 👧 **Beta or Beti** – choose who runs, and who chases: Papa with the chappal, Mummy with the belan, or Dadi with her lathi
 🛒 **Beta Ki Dukaan** – spend coins on characters, caps and school bags
+📅 **Aaj ka Challenge** – a new street every day, the same for everyone: reach the goal for bonus coins
+📤 **Share your run** – a score card of the moment you got caught, straight to WhatsApp
 🎁 **Daily Inaam** – come back every day for bigger rewards
 🚌 **Bus-roof running** – take the ramp, run on the roof, grab the coins up there
 🩴 **Chappal attack** – when Papa catches up he throws his chappal: dodge it!
@@ -48,6 +50,8 @@ v1.2
 • Three areas: Market Gali, Railway Colony (watch the train!) and Mandir Marg
 • New obstacles: scooter uncle, sleeping dogs, cement pipes
 • New power-up: Bhaiya Ki Cycle - ride faster and smash through everything
+• Aaj ka Challenge: a daily street, the same for everyone, with a coin reward
+• Share your run as a score card
 • Monsoon rain with thunder, fireworks at night, kites by day
 • Angry Papa throws from afar after 1 km; "Bal bal bache!" near-miss coins; new missions
 • Smoother on budget phones

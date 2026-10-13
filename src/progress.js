@@ -30,7 +30,7 @@ export const UPGRADE_COST = [250, 600, 1200, 2500, 5000];
 export const DAILY_REWARDS = [50, 75, 100, 150, 200, 300, 500];
 const KEY = 'bbb-save-v1';
 const DEFAULTS = { coins: 0, best: 0, skin: 'classic', owned: ['classic'], muted: false, vibrate: true,
-  tutorialDone: false, level: 0, missions: null, lastDaily: null, streak: 0, hero: 'beta', chaser: 'papa', chars: ['beta', 'papa'] };
+  tutorialDone: false, level: 0, missions: null, lastDaily: null, streak: 0, challengeDone: null, hero: 'beta', chaser: 'papa', chars: ['beta', 'papa'] };
 
 function makeMission(level, taken) {
   const tier = Math.floor(level / 3);
@@ -40,6 +40,14 @@ function makeMission(level, taken) {
     const goal = p.base + p.step * tier;
     return { stat: p.stat, goal, text: p.text(goal), reward: 50 + 25 * tier, flashed: false };
   }
+}
+
+// Aaj ka Challenge: one seeded street per date (same obstacles for everyone that day) and a distance goal.
+export const CHALLENGE_REWARD = 300;
+export function dailyChallenge(date) {
+  let h = 2166136261;
+  for (const ch of date) h = Math.imul(h ^ ch.charCodeAt(0), 16777619);
+  return { seed: h >>> 0, goal: 600 + ((h >>> 8) % 5) * 200, reward: CHALLENGE_REWARD };
 }
 
 const dayDiff = (a, b) => Math.round((Date.parse(b) - Date.parse(a)) / 864e5);
@@ -110,6 +118,13 @@ export function createProgress(storage) {
       }
       save();
       return { isNewBest, completed };
+    },
+    // Pays the day's challenge once, if the run reached the goal. Returns the coins paid (0 if not).
+    completeChallenge(today, distance) {
+      const c = dailyChallenge(today);
+      if (d.challengeDone === today || distance < c.goal) return 0;
+      d.challengeDone = today; d.coins += c.reward; save();
+      return c.reward;
     },
     dailyStatus(today) {
       if (d.lastDaily === today) return { available: false, streak: d.streak, reward: 0 };

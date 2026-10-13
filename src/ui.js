@@ -85,6 +85,8 @@ export function createUI(root, h) {
   el('div', null, 'Bhaag!', title);
   const tagline = el('div', 'sub o', 'Papa is coming with the chappal!', mHead);
   const mBottom = el('div', 'col push', null, menu);
+  const challenge = btn(mBottom, '', 'gold', () => h.onChallenge());
+  challenge.style.cssText = 'font-size:17px;padding:8px 18px;';
   const menuBest = el('div', 'stat o', '', mBottom);
   el('div', 'ver', `v${VERSION}`, menu);
   const mRow = el('div', 'row', null, mBottom);
@@ -147,6 +149,9 @@ export function createUI(root, h) {
 
   return {
     showMenu({ best, wallet: w }) { menuBest.textContent = `Best: ${Math.floor(best)}`; wallet.textContent = `🪙 ${w}`; only(menu); },
+    setChallenge(goal, reward, done) {
+      challenge.textContent = done ? `📅 Challenge done ✔ · play again` : `📅 Aaj ka Challenge: ${goal} m · 🪙${reward}`;
+    },
     setWallet(w) { wallet.textContent = `🪙 ${w}`; },
     showHUD() { only(hud); },
     setScore(s, c, mult) {

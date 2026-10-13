@@ -16,7 +16,7 @@ import { createAudio } from './audio.js';
 import { createFx, createSpeedLines } from './fx.js';
 import { createAds, createWebAds } from './ads.js';
 import { drawCard, shareRun } from './share.js';
-import { createProgress, SKINS, CHARACTERS } from './progress.js';
+import { createProgress, SKINS, CHARACTERS, dailyChallenge } from './progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL, POWERUP_TIME } from './powerups.js';
 
 const CAUGHT_SCENE_TIME = 2.2;
@@ -43,6 +43,7 @@ const NEWS = [
   ['🌙', 'Day turns to night as you run: streetlights, lit windows, neon signs, stars'],
   ['🛤️', 'Three mohallas: Market Gali, Railway Colony (watch the train!), Mandir Marg'],
   ['🛵', 'New on the road: scooter uncle, sleeping dogs, cement pipes'],
+  ['📅', "Aaj ka Challenge: one street for everyone each day, reach the goal for 300 coins. Share your run with friends!"],
   ['🌧️', 'Monsoon spells with thunder, and fireworks at night'],
   ['🚲', "New power-up: Bhaiya Ki Cycle! Ride faster and smash through everything"],
   ['😡', 'After 1 km Papa throws his chappal from afar. Dodge close for "Bal bal bache!" coins'],
@@ -115,7 +116,7 @@ export function startGame(canvas, uiRoot) {
   window.addEventListener('keydown', unlock, { capture: true });
 
   const ui = createUI(uiRoot, {
-    onStart: begin, onRestart: begin, onPause: pauseGame, onResume: resume, onRevive: () => revive(false), onWatchAd: watchAd,
+    onStart: () => begin(false), onRestart: () => begin(run?.daily), onChallenge: () => begin(true), onPause: pauseGame, onResume: resume, onRevive: () => revive(false), onWatchAd: watchAd,
     onHome() { if (state === 'paused') finishRun(); goMenu(); },
     onSound() { progress.setSetting('muted', !progress.data.muted); audio.setMuted(progress.data.muted); ui.setSettings(progress.data); },
     onVibrate() { progress.setSetting('vibrate', !progress.data.vibrate); ui.setSettings(progress.data); vibrate(40); },
@@ -152,14 +153,17 @@ export function startGame(canvas, uiRoot) {
     world.reset();
   }
 
-  function begin() {
+  // daily: today's challenge street (seeded: the same obstacles, rain and all, for everyone today).
+  function begin(daily = false) {
     clearItems();
+    const ch = dailyChallenge(today());
+    const seed = daily ? ch.seed : (Math.random() * 1e9) | 0;
     run = {
-      p: createPlayer(), z: 0, speed: SPEED_START, prevLane: 1, t: 0, hint: 0,
-      spawner: createSpawner((Math.random() * 1e9) | 0), chaser: createChaser(), pu: createPowerups(),
+      p: createPlayer(), z: 0, speed: SPEED_START, prevLane: 1, t: 0, hint: 0, daily, goal: ch.goal, goalHit: false,
+      spawner: createSpawner(seed), chaser: createChaser(), pu: createPowerups(),
       items: [], hitSet: new Set(), coins: 0, committed: 0, score: 0, stumbleT: 0, invuln: 0,
       caughtT: 0, smackT: 0, papaZ: 3, papaX: 0, zone: 0, ground: 0, floorS: 0, pendingThrow: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
-      dodgeT: -9, dodgeFromX: 0, milestone: 0, rainStart: rainStartFor(Math.random()), thunderT: 3, flashT: 0, rained: false,
+      dodgeT: -9, dodgeFromX: 0, milestone: 0, rainStart: rainStartFor(daily ? (seed % 1000) / 1000 : Math.random()), thunderT: 3, flashT: 0, rained: false,
       stats: { score: 0, coins: 0, distance: 0, jumps: 0, slides: 0, powerups: 0, dodges: 0, nearMisses: 0, areas: 1 },
     };
     if (progress.data.tutorialDone) run.hint = HINTS.length;
@@ -169,6 +173,7 @@ export function startGame(canvas, uiRoot) {
     ui.setScore(0, 0, run.mult);
     ui.setPowerups([]);
     ui.flash('Bhaag!');
+    if (daily) ui.toast(`📅 Aaj ka Challenge: reach ${ch.goal} m!`);
     audio.startMusic();
     ads.preload(); // so the "watch ad" revive is instant at game over
   }
@@ -179,6 +184,8 @@ export function startGame(canvas, uiRoot) {
     state = 'menu';
     audio.stopMusic();
     ui.showMenu({ best: progress.data.best, wallet: progress.data.coins });
+    const ch = dailyChallenge(today());
+    ui.setChallenge(ch.goal, ch.reward, progress.data.challengeDone === today());
   }
 
   function pauseGame() {
@@ -202,7 +209,10 @@ export function startGame(canvas, uiRoot) {
     progress.addCoins(run.coins - run.committed);
     run.committed = run.coins;
     if (!progress.data.tutorialDone) progress.setSetting('tutorialDone', true);
-    return progress.finishRun(run.stats);
+    const r = progress.finishRun(run.stats);
+    const paid = run.daily ? progress.completeChallenge(today(), run.stats.distance) : 0;
+    if (paid) r.completed.push({ text: 'Aaj ka Challenge', reward: paid });
+    return r;
   }
 
   const reviveCost = () => 100 * 2 ** run.revives;
@@ -444,6 +454,7 @@ export function startGame(canvas, uiRoot) {
     run.t += dt;
     const zone = zoneAt(run.z);
     if (zone !== run.zone) { run.zone = zone; run.stats.areas += 1; ui.flash(`📍 ${ZONES[zone].name}`); audio.play('bell'); }
+    if (run.daily && !run.goalHit && -run.z >= run.goal) { run.goalHit = true; ui.flash('🎉 Challenge done!'); audio.play('powerup'); }
     if (-run.z >= (run.milestone + 1) * MILESTONE) { run.milestone += 1; ui.toast(`🏁 ${run.milestone * MILESTONE} m! Shabash!`); }
     audio.setTempo((run.speed - SPEED_START) / (SPEED_MAX - SPEED_START));
     if (run.hint < HINTS.length && run.t >= HINTS[run.hint][0]) ui.hint(HINTS[run.hint++][1]);

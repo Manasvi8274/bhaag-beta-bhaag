@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createProgress, SKINS, DAILY_REWARDS, UPGRADE_COST, CHARACTERS } from '../src/progress.js';
+import { createProgress, SKINS, DAILY_REWARDS, UPGRADE_COST, CHARACTERS, dailyChallenge, CHALLENGE_REWARD } from '../src/progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive } from '../src/powerups.js';
 
 const mem = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v) }; };
@@ -115,4 +115,19 @@ test('characters: Beta and Papa free, others bought once, then picked for free',
   s.setItem('bbb-save-v1', JSON.stringify({ hero: 'beti', chaser: 'ghost', chars: ['beta', 'papa'] }));
   const q = createProgress(s);
   assert.equal(q.data.hero, 'beta', 'not owned -> default'); assert.equal(q.data.chaser, 'papa');
+});
+
+test('daily challenge: same street all day, new one tomorrow, paid once on reaching the goal', () => {
+  const a = dailyChallenge('2026-10-14');
+  assert.deepEqual(a, dailyChallenge('2026-10-14'));
+  assert.notEqual(a.seed, dailyChallenge('2026-10-15').seed);
+  const goals = new Set();
+  for (let d = 1; d <= 28; d++) { const g = dailyChallenge(`2026-02-${String(d).padStart(2, '0')}`).goal; goals.add(g); assert.ok(g >= 600 && g <= 1400 && g % 200 === 0); }
+  assert.ok(goals.size >= 3, 'goals vary');
+  const p = createProgress(mem());
+  assert.equal(p.completeChallenge('2026-10-14', a.goal - 1), 0);
+  assert.equal(p.completeChallenge('2026-10-14', a.goal), CHALLENGE_REWARD);
+  assert.equal(p.data.coins, CHALLENGE_REWARD);
+  assert.equal(p.completeChallenge('2026-10-14', 99999), 0, 'once a day');
+  assert.equal(p.completeChallenge('2026-10-15', 99999), CHALLENGE_REWARD);
 });
