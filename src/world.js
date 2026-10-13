@@ -382,6 +382,12 @@ export function createWorld(scene, seed = 1) {
       BULB_MATS.forEach((m, k) => { m.emissiveIntensity = 0.3 + night * (2 + Math.sin(t * 3 + k * 1.3)); });
     },
     lampLevel: () => LAMPS.reduce((a, l) => a + l.level, 0) / LAMPS.length,
+    // rain 0..1: the road goes dark and shiny, so lamps and headlights glint on it
+    setWet(rain) {
+      const road = mat(0x3b3b3b);
+      road.roughness = 0.85 - rain * 0.5; // no metalness: without an environment map that just turns it black
+      road.color.setHex(0x3b3b3b).multiplyScalar(1 + rain * 0.15); // a touch lighter: Beta is black and must read on it
+    },
     reset() {
       segments.forEach((seg, i) => { seg.position.z = 0 - i * SEG_LEN; place(seg, i); });
       train.visible = false;

@@ -101,3 +101,31 @@ export function createSky(scene) {
     },
   };
 }
+
+// Rain streaks around the camera: one instanced mesh, falling and rushing past with the run.
+export function createRain(scene, n = 260) {
+  const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.018, 0.7, 0.018),
+    new THREE.MeshBasicMaterial({ color: 0xc8dcff, transparent: true, opacity: 0, depthWrite: false, fog: false }), n);
+  mesh.frustumCulled = false;
+  mesh.visible = false;
+  scene.add(mesh);
+  const rng = mulberry32(7);
+  const drops = Array.from({ length: n }, () => new THREE.Vector3((rng() - 0.5) * 16, rng() * 12, -rng() * 34 + 4));
+  const m = new THREE.Matrix4(), tilt = new THREE.Matrix4().makeRotationX(0.25);
+  return {
+    update(dt, camera, amount, speed) {
+      mesh.visible = amount > 0.01;
+      if (!mesh.visible) return;
+      mesh.material.opacity = amount * 0.55;
+      drops.forEach((d, i) => {
+        d.y -= 16 * dt;
+        d.z += speed * dt;
+        if (d.y < 0) d.y += 12;
+        if (d.z > 4) d.z -= 34;
+        m.makeTranslation(camera.position.x + d.x, d.y, camera.position.z - 6 + d.z).multiply(tilt);
+        mesh.setMatrixAt(i, m);
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+    },
+  };
+}

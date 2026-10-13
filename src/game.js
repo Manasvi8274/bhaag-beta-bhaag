@@ -7,8 +7,8 @@ import { createChaser, stumble, catchNow, updateChaser, throwDue, angryThrowDue 
 import { createStickman } from './stickman.js';
 import { createProp, setPropsNight, addHeadlights } from './props.js';
 import { createWorld, lampForLight, LAMP_HEAD_Y } from './world.js';
-import { createSky } from './sky.js';
-import { skyAt, menuTime } from './daynight.js';
+import { createSky, createRain } from './sky.js';
+import { skyAt, menuTime, mix, rainAt, rainStartFor } from './daynight.js';
 import { ZONES, zoneAt } from './zones.js';
 import { createInput } from './input.js';
 import { createUI } from './ui.js';
@@ -53,6 +53,7 @@ export function startGame(canvas, uiRoot) {
   // Created up front (intensity 0 by day) so the light count never changes: no shader recompiles mid-run.
   const lampLights = Array.from({ length: LAMP_LIGHTS }, () => { const l = new THREE.PointLight(0xffa646, 0, 13, 1.6); scene.add(l); return l; });
   const sky = createSky(scene);
+  const rainFx = createRain(scene);
   const betaLight = new THREE.PointLight(0xcfd8ff, 0, 9, 1.2); // night: lights the road around Beta so his black body reads
   scene.add(betaLight);
 
@@ -118,7 +119,7 @@ export function startGame(canvas, uiRoot) {
       spawner: createSpawner((Math.random() * 1e9) | 0), chaser: createChaser(), pu: createPowerups(),
       items: [], hitSet: new Set(), coins: 0, committed: 0, score: 0, stumbleT: 0, invuln: 0,
       caughtT: 0, smackT: 0, papaZ: 3, papaX: 0, zone: 0, ground: 0, floorS: 0, pendingThrow: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
-      dodgeT: -9, dodgeFromX: 0, milestone: 0,
+      dodgeT: -9, dodgeFromX: 0, milestone: 0, rainStart: rainStartFor(Math.random()), thunderT: 3, flashT: 0, rained: false,
       stats: { score: 0, coins: 0, distance: 0, jumps: 0, slides: 0, powerups: 0, dodges: 0, nearMisses: 0, areas: 1 },
     };
     if (progress.data.tutorialDone) run.hint = HINTS.length;
@@ -144,6 +145,7 @@ export function startGame(canvas, uiRoot) {
     if (state !== 'playing') return;
     state = 'paused';
     audio.stopMusic();
+    audio.setRain(0);
     ui.showPause();
   }
 
@@ -335,6 +337,7 @@ export function startGame(canvas, uiRoot) {
       run.stats.coins += NEAR_MISS_COINS;
       run.stats.nearMisses += 1;
       ui.toast(`Bal bal bache! +${NEAR_MISS_COINS} 🪙`);
+      vibrate(20);
       audio.play('coin');
       fx.burst(run.p.x, 1.2, run.z, 0xffd60a, 10, { speed: 3, up: 3, life: 0.5 });
     }
@@ -383,8 +386,9 @@ export function startGame(canvas, uiRoot) {
     updatePowerups(run.pu, dt);
     run.stumbleT = Math.max(0, run.stumbleT - dt);
     run.invuln = Math.max(0, run.invuln - dt);
-    if (p.grounded && !run.wasGrounded) fx.burst(p.x, p.y + 0.05, run.z, 0xc9b79c, 6, { speed: 2, up: 1, life: 0.4 });
-    else if (p.grounded && Math.random() < dt * (p.sliding ? 30 : 6)) fx.burst(p.x, p.y + 0.05, run.z + 0.3, 0xc9b79c, 1, { speed: 1, up: 1, life: 0.4, gravity: -3 });
+    const dust = updateWeather(dt) > 0.3 ? 0x9fc3e6 : 0xc9b79c; // splashes in the rain
+    if (p.grounded && !run.wasGrounded) fx.burst(p.x, p.y + 0.05, run.z, dust, 6, { speed: 2, up: 1, life: 0.4 });
+    else if (p.grounded && Math.random() < dt * (p.sliding ? 30 : 6)) fx.burst(p.x, p.y + 0.05, run.z + 0.3, dust, 1, { speed: 1, up: 1, life: 0.4, gravity: -3 });
     run.wasGrounded = p.grounded;
 
     spawnItems();
@@ -425,18 +429,29 @@ export function startGame(canvas, uiRoot) {
     }
   }
 
-  // Time of day: sky, fog, sun/moon light, streetlights, windows, vehicle lights.
-  function applySky(t, playerZ, clockT) {
+  // Time of day (+ rain): sky, fog, sun/moon light, streetlights, windows, vehicle lights, wet road.
+  function applySky(t, playerZ, clockT, rain = 0, lightning = 0) {
     const s = skyAt(t);
+    if (rain > 0) {
+      const grey = mix(0x7b8490, 0x1a1e26, s.night);
+      s.top = mix(s.top, grey, rain * 0.75);
+      s.horizon = mix(s.horizon, grey, rain * 0.7);
+      s.sun *= 1 - rain * 0.35;
+      s.hemi *= 1 - rain * 0.1;
+    }
     scene.fog.color.setHex(s.horizon);
+    scene.fog.near = 45 - rain * 20;
+    scene.fog.far = 150 - rain * 50;
     sun.color.setHex(s.sunColor);
     sun.intensity = s.sun;
-    hemi.intensity = s.hemi;
+    hemi.intensity = s.hemi + lightning * 2.5;
     hemi.color.lerpColors(HEMI_DAY, HEMI_NIGHT, s.night);
     hemi.groundColor.lerpColors(GROUND_DAY, GROUND_NIGHT, s.night);
     world.setNight(s.night, clockT);
-    audio.setNight(s.night);
+    world.setWet(rain);
     setPropsNight(s.night);
+    audio.setNight(s.night);
+    audio.setRain(state === 'paused' ? 0 : rain);
     const lit = world.lampLevel();
     lampLights.forEach((l, j) => {
       const lamp = lampForLight(j, LAMP_LIGHTS, playerZ);
@@ -445,6 +460,19 @@ export function startGame(canvas, uiRoot) {
     });
     betaLight.intensity = s.night * 9;
     sky.update(camera, s, clockT);
+  }
+
+  // Monsoon spell: a heads-up, then lightning + thunder every few seconds while it pours.
+  function updateWeather(dt) {
+    const rain = rainAt(run.t, run.rainStart);
+    if (rain > 0 && !run.rained) { run.rained = true; ui.toast('🌧️ Baarish aa gayi! Sambhal ke!'); }
+    run.flashT = Math.max(0, run.flashT - dt);
+    if (rain > 0.6 && (run.thunderT -= dt) <= 0) {
+      run.thunderT = 5 + Math.random() * 7;
+      run.flashT = 0.2;
+      audio.play('thunder');
+    }
+    return rain;
   }
 
   function placeActors(dt) {
@@ -473,7 +501,9 @@ export function startGame(canvas, uiRoot) {
     camera.updateProjectionMatrix();
     speedLines.update(dt, camera, state === 'playing' ? Math.max(0, (run.speed - 20) / (SPEED_MAX - 20)) : 0, run.speed);
     if (world.update(run.z, dt)) audio.play('train');
-    applySky(run.t, run.z, run.t);
+    const rain = rainAt(run.t, run.rainStart);
+    applySky(run.t, run.z, run.t, rain, run.flashT / 0.2);
+    rainFx.update(dt, camera, rain, state === 'playing' ? run.speed : 0);
   }
 
   function menuScene(t) {
@@ -493,6 +523,7 @@ export function startGame(canvas, uiRoot) {
     sun.target.position.set(0, 0, -4);
     betaLight.position.set(0, 3, -2.5);
     applySky(menuTime(new Date().getHours()), 0, t);
+    rainFx.update(0, camera, 0, 0);
   }
 
   function resize() {

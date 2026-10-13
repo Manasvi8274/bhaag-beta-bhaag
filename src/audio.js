@@ -1,6 +1,6 @@
 // Procedural SFX + dhol loop. Never throws, even without Web Audio.
 export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAudioContext) {
-  let ctx = null, master = null, muted = !Ctx, timer = null, nextNote = 0, step = 0, stepDur = 0.25, night = 0;
+  let ctx = null, master = null, muted = !Ctx, timer = null, nextNote = 0, step = 0, stepDur = 0.25, night = 0, rainGain = null;
 
   function envelope(vol, when, dur) {
     const g = ctx.createGain();
@@ -48,6 +48,7 @@ export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAu
     train: () => { const t = ctx.currentTime; tone('sawtooth', 311, 305, 1.3, 0.1, t); tone('sawtooth', 392, 385, 1.3, 0.08, t); },
     bell: () => { const t = ctx.currentTime; tone('sine', 1318, 1310, 1.6, 0.22, t); tone('sine', 2637, 2620, 0.7, 0.08, t); tone('triangle', 659, 655, 1.2, 0.12, t); },
     firework: () => { const t = ctx.currentTime; noise(0.3, 0.12, 'lowpass', 900, 150, t); for (let i = 1; i < 5; i++) noise(0.04, 0.05, 'highpass', 3000, 3000, t + 0.25 + i * 0.07); },
+    thunder: () => { const t = ctx.currentTime; noise(1.8, 0.5, 'lowpass', 300, 60, t + 0.3); noise(0.25, 0.25, 'lowpass', 1200, 200, t + 0.3); },
     cricket: () => { const t = ctx.currentTime; for (let i = 0; i < 3; i++) tone('sine', 4300, 4200, 0.03, 0.04, t + i * 0.06); },
   };
 
@@ -96,5 +97,22 @@ export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAu
     // f: 0 = starting speed .. 1 = top speed; the dhol speeds up from 120 to ~150 BPM.
     setTempo(f) { stepDur = 0.25 - 0.05 * Math.max(0, Math.min(1, f)); },
     setNight(n) { night = n; },
+    // Rain hiss: one looping noise source, created the first time it rains; level 0..1.
+    setRain(level) {
+      if (!ctx || (!rainGain && level <= 0)) return;
+      try {
+        if (!rainGain) {
+          const buf = ctx.createBuffer(1, ctx.sampleRate * 2, ctx.sampleRate), d = buf.getChannelData(0);
+          for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+          const src = ctx.createBufferSource(), f = ctx.createBiquadFilter();
+          src.buffer = buf; src.loop = true;
+          f.type = 'bandpass'; f.frequency.value = 2500; f.Q.value = 0.5;
+          rainGain = ctx.createGain(); rainGain.gain.value = 0;
+          src.connect(f); f.connect(rainGain); rainGain.connect(master);
+          src.start();
+        }
+        rainGain.gain.value = level * 0.18;
+      } catch { /* never worth a crash */ }
+    },
   };
 }

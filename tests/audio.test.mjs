@@ -34,7 +34,7 @@ test('nothing plays before unlock; context created once', () => {
 test('every sound builds nodes; unknown and muted build none', () => {
   const a = createAudio(FakeCtx);
   a.unlock();
-  for (const n of ['jump', 'slide', 'coin', 'stumble', 'smack', 'powerup', 'horn', 'train', 'bell', 'cricket', 'firework']) {
+  for (const n of ['jump', 'slide', 'coin', 'stumble', 'smack', 'powerup', 'horn', 'train', 'bell', 'cricket', 'firework', 'thunder']) {
     created = 0; a.play(n); assert.ok(created >= 2, `${n} created ${created}`);
   }
   created = 0; a.play('trumpet'); assert.equal(created, 0);
@@ -54,4 +54,13 @@ test('music starts once and stops', async () => {
   const n = created;
   await new Promise(r => setTimeout(r, 130));
   assert.equal(created, n, 'nothing after stop');
+});
+
+test('rain hiss: nothing until it rains, then one looping source', () => {
+  const a = createAudio(FakeCtx);
+  a.setRain(1); // before unlock: no-op
+  a.unlock();
+  created = 0; a.setRain(0); assert.equal(created, 0, 'no rain, no nodes');
+  a.setRain(0.5); const n = created; assert.ok(n >= 3);
+  a.setRain(1); a.setRain(0); assert.equal(created, n, 'reused');
 });

@@ -13,7 +13,7 @@ const K = [
   [CYCLE, 0x3f95e6, 0xbfe3ff, 0xfff1d6, 1.7, 1.1, 0],
 ];
 
-const mix = (a, b, f) => {
+export const mix = (a, b, f) => {
   let out = 0;
   for (const s of [16, 8, 0]) out |= Math.round(((a >> s) & 255) + (((b >> s) & 255) - ((a >> s) & 255)) * f) << s;
   return out;
@@ -30,3 +30,11 @@ export function skyAt(t) {
 
 // Real-world clock for the menu: night between 7 pm and 6 am, so the menu matches the player's evening.
 export const menuTime = (hour) => (hour >= 19 || hour < 6 ? 60 : 10);
+
+// Monsoon: some runs get a rain spell. rainAt(t, start) = 0..1 with a few seconds to roll in and to clear.
+export const RAIN_CHANCE = 0.4, RAIN_LEN = 35, RAIN_RAMP = 5;
+export const rainStartFor = (r) => (r < RAIN_CHANCE ? 45 + (r / RAIN_CHANCE) * 30 : null); // one random number per run
+export function rainAt(t, start) {
+  if (start === null || t < start || t > start + RAIN_LEN) return 0;
+  return Math.min(1, (t - start) / RAIN_RAMP, (start + RAIN_LEN - t) / RAIN_RAMP);
+}

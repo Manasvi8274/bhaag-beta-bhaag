@@ -34,3 +34,15 @@ test('each lamp light sits on a distinct lamp just ahead of the camera, and only
     prev = ls;
   }
 });
+
+test('monsoon: only some runs, rolls in and clears', async () => {
+  const { rainAt, rainStartFor, RAIN_CHANCE, RAIN_LEN } = await import('../src/daynight.js');
+  assert.equal(rainStartFor(RAIN_CHANCE + 0.01), null);
+  const s = rainStartFor(0.1);
+  assert.ok(s >= 45 && s <= 75);
+  assert.equal(rainAt(100, null), 0);
+  assert.equal(rainAt(s - 1, s), 0);
+  assert.ok(rainAt(s + 2, s) > 0 && rainAt(s + 2, s) < 1);
+  assert.equal(rainAt(s + RAIN_LEN / 2, s), 1);
+  assert.equal(rainAt(s + RAIN_LEN + 1, s), 0);
+});
