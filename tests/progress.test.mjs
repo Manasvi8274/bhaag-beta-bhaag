@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createProgress, SKINS, DAILY_REWARDS, UPGRADE_COST } from '../src/progress.js';
+import { createProgress, SKINS, DAILY_REWARDS, UPGRADE_COST, CHARACTERS } from '../src/progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive } from '../src/powerups.js';
 
 const mem = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v) }; };
@@ -96,4 +96,23 @@ test('power-up upgrades: cost coins, +25% duration each, max 5, saved', () => {
   assert.equal(p.upgrade('elephant'), false);
   assert.equal(createProgress(store).upgradeLevel('magnet'), 5, 'persisted');
   assert.equal(createProgress(mem()).upgradeLevel('magnet'), 0, 'fresh save not shared');
+});
+
+test('characters: Beta and Papa free, others bought once, then picked for free', () => {
+  const s = mem();
+  const p = createProgress(s);
+  assert.equal(p.data.hero, 'beta'); assert.equal(p.data.chaser, 'papa');
+  assert.equal(p.pickChar('chaser', 'mummy'), false, 'no coins');
+  p.addCoins(CHARACTERS.chaser.mummy.price);
+  assert.equal(p.pickChar('chaser', 'mummy'), true);
+  assert.equal(p.data.coins, 0);
+  assert.equal(p.pickChar('chaser', 'papa'), true);
+  assert.equal(p.pickChar('chaser', 'mummy'), true, 'owned: free');
+  assert.equal(p.data.coins, 0);
+  assert.equal(p.pickChar('hero', 'mummy'), false, 'wrong kind');
+  assert.equal(p.pickChar('hero', 'nope'), false);
+  assert.equal(createProgress(s).data.chaser, 'mummy', 'saved');
+  s.setItem('bbb-save-v1', JSON.stringify({ hero: 'beti', chaser: 'ghost', chars: ['beta', 'papa'] }));
+  const q = createProgress(s);
+  assert.equal(q.data.hero, 'beta', 'not owned -> default'); assert.equal(q.data.chaser, 'papa');
 });

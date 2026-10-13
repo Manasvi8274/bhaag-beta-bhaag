@@ -4,7 +4,7 @@ import { createPlayer, applyAction, updatePlayer, getHitbox } from './player.js'
 import { aabbOverlap, firstHit, groundAt } from './collision.js';
 import { createSpawner, spawnUntil } from './spawner.js';
 import { createChaser, stumble, catchNow, updateChaser, throwDue, angryThrowDue } from './chaser.js';
-import { createStickman } from './stickman.js';
+import { createStickman, HEROES, CHASERS } from './stickman.js';
 import { createProp, setPropsNight, addHeadlights, PROP_NAMES, buildBicycle } from './props.js';
 import { createWorld, lampForLight, LAMP_HEAD_Y } from './world.js';
 import { createSky, createRain } from './sky.js';
@@ -15,7 +15,7 @@ import { createUI } from './ui.js';
 import { createAudio } from './audio.js';
 import { createFx, createSpeedLines } from './fx.js';
 import { createAds, createWebAds } from './ads.js';
-import { createProgress, SKINS } from './progress.js';
+import { createProgress, SKINS, CHARACTERS } from './progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL, POWERUP_TIME } from './powerups.js';
 
 const CAUGHT_SCENE_TIME = 2.2;
@@ -23,13 +23,22 @@ const THROW_WINDUP = 0.55, CHAPPAL_REL_SPEED = 6; // warning time, and how much 
 const LAMP_LIGHTS = 2; // real lights hopping between streetlights near Beta; the rest are emissive + glow decals
 const HEMI_DAY = new THREE.Color(0xffffff), HEMI_NIGHT = new THREE.Color(0x7d8fd8);
 const GROUND_DAY = new THREE.Color(0x8a7a66), GROUND_NIGHT = new THREE.Color(0x3a3440);
-const TAUNTS = ['Ruk ja!', 'Ruk ja nalayak!', 'Aaj nahi chhodunga!', 'Remote kahan hai?!', 'Ghar chal tu!', 'Bas ek baar haath aa!'];
+// Each chaser: what they throw, the warning, the menu line and their taunts.
+const CHASER_INFO = {
+  papa: { throws: 'chappal', warn: '⚠️ Chappal aayi!', line: 'Papa is coming with the chappal!',
+    taunts: ['Ruk ja!', 'Ruk ja nalayak!', 'Aaj nahi chhodunga!', 'Remote kahan hai?!', 'Ghar chal tu!', 'Bas ek baar haath aa!'] },
+  mummy: { throws: 'belan', warn: '⚠️ Belan aaya!', line: 'Mummy is coming with the belan!',
+    taunts: ['Ruk ja!', 'Homework kaun karega?!', 'Aaj khaana band!', 'Belan dekha hai?!', 'Ghar aa, phir batati hoon!'] },
+  dadi: { throws: 'chappal', warn: '⚠️ Dadi ki chappal!', line: 'Dadi is coming with her lathi!',
+    taunts: ['Arre o nalayak!', 'Dadi se bhaagega?!', 'Ruk ja, kaan khichungi!', 'Hai Ram, yeh bachcha!'] },
+};
 const CYCLE_BOOST = 1.35, SMASH_COINS = 2; // Bhaiya Ki Cycle: faster, and obstacles go flying
 const NEAR_MISS_COINS = 5, NEAR_MISS_WINDOW = 0.6; // dodged out of a vehicle's lane this recently = a near miss
 const MILESTONE = 500;
 const FIREWORKS = [0xff3b3b, 0xffd60a, 0x3aff7a, 0x3a86ff, 0xff70ff, 0xffffff];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const NEWS = [
+  ['👧', 'Play as Beti! And choose who chases you: Papa (chappal), Mummy (belan) or Dadi (lathi) in the shop'],
   ['🌙', 'Day turns to night as you run: streetlights, lit windows, neon signs, stars'],
   ['🛤️', 'Three mohallas: Market Gali, Railway Colony (watch the train!), Mandir Marg'],
   ['🛵', 'New on the road: scooter uncle, sleeping dogs, cement pipes'],
@@ -66,17 +75,18 @@ export function startGame(canvas, uiRoot) {
   const betaLight = new THREE.PointLight(0xcfd8ff, 0, 9, 1.2); // night: lights the road around Beta so his black body reads
   scene.add(betaLight);
 
-  const beta = createStickman('beta');
-  const papa = createStickman('papa');
+  // Every hero and chaser is built once; the chosen pair is shown (beta = whoever runs, papa = whoever chases).
+  const heroes = Object.fromEntries(HEROES.map((t) => [t, createStickman(t)]));
+  const chasers = Object.fromEntries(CHASERS.map((t) => [t, createStickman(t)]));
+  let beta = heroes.beta, papa = chasers.papa;
   const bubble = new THREE.Mesh(new THREE.SphereGeometry(1.15, 20, 14),
     new THREE.MeshStandardMaterial({ color: 0xff70a6, emissive: 0xff70a6, emissiveIntensity: 0.4, transparent: true, opacity: 0.22, depthWrite: false }));
   bubble.position.y = 0.95;
-  beta.group.add(bubble);
+  bubble.visible = false;
   const bike = new THREE.Group();
   const bikeWheels = buildBicycle(bike);
   bike.visible = false;
-  beta.group.add(bike);
-  scene.add(beta.group, papa.group);
+  for (const m of [...Object.values(heroes), ...Object.values(chasers)]) scene.add(m.group);
 
   const world = createWorld(scene, 1);
   const fx = createFx(scene);
@@ -87,7 +97,15 @@ export function startGame(canvas, uiRoot) {
   if (!ads.available) ads = createWebAds(); // PWA / browser
   audio.setMuted(progress.data.muted);
   const applySkin = () => { const s = SKINS[progress.data.skin]; beta.setColors(s.cap, s.bag); };
-  applySkin();
+  const chaserInfo = () => CHASER_INFO[progress.data.chaser];
+  function applyCharacters() {
+    beta = heroes[progress.data.hero];
+    papa = chasers[progress.data.chaser];
+    for (const m of [...Object.values(heroes), ...Object.values(chasers)]) m.group.visible = m === beta || m === papa;
+    beta.group.add(bubble, bike);
+    applySkin();
+    ui.setCharacters(CHARACTERS.hero[progress.data.hero].name, chaserInfo().line);
+  }
 
   let state = 'menu', run = null, shake = 0, baseFov = 62;
   const vibrate = (ms) => { if (progress.data.vibrate) try { navigator.vibrate?.(ms); } catch { /* unsupported */ } };
@@ -100,21 +118,28 @@ export function startGame(canvas, uiRoot) {
     onHome() { if (state === 'paused') finishRun(); goMenu(); },
     onSound() { progress.setSetting('muted', !progress.data.muted); audio.setMuted(progress.data.muted); ui.setSettings(progress.data); },
     onVibrate() { progress.setSetting('vibrate', !progress.data.vibrate); ui.setSettings(progress.data); vibrate(40); },
-    onShop: () => ui.showShop(SKINS, progress.data, upgradeList()),
+    onShop: () => ui.showShop(SKINS, progress.data, upgradeList(), CHARACTERS),
+    onChar(kind, id) {
+      const had = progress.data.chars.includes(id);
+      if (progress.pickChar(kind, id)) { applyCharacters(); audio.play(had ? 'coin' : 'powerup'); }
+      ui.showShop(SKINS, progress.data, upgradeList(), CHARACTERS);
+      ui.setWallet(progress.data.coins);
+    },
     onUpgrade(name) {
       if (progress.upgrade(name)) audio.play('powerup');
-      ui.showShop(SKINS, progress.data, upgradeList());
+      ui.showShop(SKINS, progress.data, upgradeList(), CHARACTERS);
       ui.setWallet(progress.data.coins);
     },
     onSkin(id) {
       if (progress.select(id) || progress.buy(id)) { applySkin(); audio.play('powerup'); }
-      ui.showShop(SKINS, progress.data, upgradeList());
+      ui.showShop(SKINS, progress.data, upgradeList(), CHARACTERS);
       ui.setWallet(progress.data.coins);
     },
     onMissions: () => ui.showMissions(progress.data.missions, progress.multiplier()),
     onClaimDaily() { progress.claimDaily(today()); ui.setWallet(progress.data.coins); audio.play('powerup'); },
   });
   ui.setSettings(progress.data);
+  applyCharacters();
   const upgradeList = () => Object.keys(POWERUP_TIME).map((name) => ({
     name, label: POWERUP_LABEL[name], level: progress.upgradeLevel(name), cost: progress.upgradeCost(name), secs: progress.powerupTime(name),
   }));
@@ -331,7 +356,7 @@ export function startGame(canvas, uiRoot) {
     audio.play('stumble');
     fx.burst(p.x, 0.3, run.z, 0xb5a99a, 10, { speed: 3, up: 2 });
     if (stumble(run.chaser) === 'caught') { enterCaught(); return; }
-    ui.flash(pick(TAUNTS));
+    ui.flash(pick(chaserInfo().taunts));
   }
 
   // Papa's chappal: a warning, then it flies down the lane Beta is in. Dodge, jump or slide; a hit is a stumble
@@ -340,13 +365,13 @@ export function startGame(canvas, uiRoot) {
     if (throwDue(run.chaser) || angryThrowDue(run.chaser, -run.z)) {
       run.pendingThrow = THROW_WINDUP;
       run.throwX = LANES[run.p.lane]; // aimed when the warning shows, so reacting to it saves you
-      ui.flash('⚠️ Chappal aayi!');
+      ui.flash(chaserInfo().warn);
       audio.play('whoosh');
     }
     if (run.pendingThrow > 0 && (run.pendingThrow -= dt) <= 0) {
       // from Papa's hand, or (an angry throw from afar) from just behind the camera; never past the clean-up line at +10
       const item = { type: 'obstacle', name: 'chappal', kind: 'low', x: run.throwX, y: 0.9, z: run.z + Math.min(run.papaZ, 8) - 0.5, w: 0.5, h: 0.35, d: 0.5 };
-      const mesh = createProp('chappal');
+      const mesh = createProp(chaserInfo().throws);
       scene.add(mesh);
       run.items.push({ item, mesh });
     }

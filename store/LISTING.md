@@ -24,7 +24,8 @@ sabzi thelas and buses, duck under shaadi banners, and leap over potholes. Trip 
 • Double Coins
 • Bhaiya Ki Cycle – hop on a bicycle, ride faster and smash through everything in your way
 🎯 **Missions** – finish missions to raise your score multiplier up to x10
-🛒 **Beta Ki Dukaan** – spend coins on new caps and school bags
+👧 **Beta or Beti** – choose who runs, and who chases: Papa with the chappal, Mummy with the belan, or Dadi with her lathi
+🛒 **Beta Ki Dukaan** – spend coins on characters, caps and school bags
 🎁 **Daily Inaam** – come back every day for bigger rewards
 🚌 **Bus-roof running** – take the ramp, run on the roof, grab the coins up there
 🩴 **Chappal attack** – when Papa catches up he throws his chappal: dodge it!
@@ -42,6 +43,7 @@ Every Indian kid knows this chase. How far can YOU run before Papa catches you?
 
 ## Release notes (paste into "What's new")
 v1.2
+• Play as Beti, and pick your chaser: Papa (chappal), Mummy (belan) or Dadi (lathi)
 • Day turns to night: streetlights switch on, windows and shop signs glow, stars and moon
 • Three areas: Market Gali, Railway Colony (watch the train!) and Mandir Marg
 • New obstacles: scooter uncle, sleeping dogs, cement pipes

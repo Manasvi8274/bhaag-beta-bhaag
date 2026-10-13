@@ -135,6 +135,10 @@ const BUILD = {
     box(g, 0.23, 0.03, 0.49, 0x1d4ed8, 0, 0.005, 0);
     for (const s of [-1, 1]) box(g, 0.035, 0.05, 0.2, 0x1d4ed8, s * 0.055, 0.08, -0.08).rotation.y = s * 0.45;
   },
+  belan(g) { // Mummy's rolling pin, thrown like the chappal; game.js spins it
+    cyl(g, 0.07, 0.07, 0.42, 0xc68642, 0, 0.07, 0).rotation.z = Math.PI / 2;
+    for (const s of [-1, 1]) cyl(g, 0.03, 0.03, 0.12, 0x8b5a2b, s * 0.27, 0.07, 0).rotation.z = Math.PI / 2;
+  },
   banner(g) { // shaadi banner across the street: slide under it
     for (const x of [-3.2, 3.2]) {
       cyl(g, 0.07, 0.08, 2.3, 0xc8a165, x, 1.15, 0, undefined, 8);

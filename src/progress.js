@@ -9,6 +9,12 @@ export const SKINS = {
   sona: { name: 'Sone Ka Beta', cap: 0xffc300, bag: 0x1b1b1b, price: 2500 },
 };
 
+// Who runs, and who chases. Bought once with coins, then picked in the shop.
+export const CHARACTERS = {
+  hero: { beta: { name: 'Beta', price: 0 }, beti: { name: 'Beti', price: 800 } },
+  chaser: { papa: { name: 'Papa · chappal', price: 0 }, mummy: { name: 'Mummy · belan', price: 1500 }, dadi: { name: 'Dadi · lathi', price: 3000 } },
+};
+
 const POOL = [
   { stat: 'coins', text: (n) => `Collect ${n} coins in one run`, base: 30, step: 20 },
   { stat: 'distance', text: (n) => `Run ${n} m in one run`, base: 300, step: 250 },
@@ -24,7 +30,7 @@ export const UPGRADE_COST = [250, 600, 1200, 2500, 5000];
 export const DAILY_REWARDS = [50, 75, 100, 150, 200, 300, 500];
 const KEY = 'bbb-save-v1';
 const DEFAULTS = { coins: 0, best: 0, skin: 'classic', owned: ['classic'], muted: false, vibrate: true,
-  tutorialDone: false, level: 0, missions: null, lastDaily: null, streak: 0 };
+  tutorialDone: false, level: 0, missions: null, lastDaily: null, streak: 0, hero: 'beta', chaser: 'papa', chars: ['beta', 'papa'] };
 
 function makeMission(level, taken) {
   const tier = Math.floor(level / 3);
@@ -42,6 +48,8 @@ export function createProgress(storage) {
   let d;
   try { d = { ...DEFAULTS, ...JSON.parse(storage?.getItem(KEY) || '{}') }; } catch { d = { ...DEFAULTS }; }
   if (!SKINS[d.skin]) d.skin = 'classic';
+  if (!Array.isArray(d.chars)) d.chars = [...DEFAULTS.chars];
+  for (const kind of ['hero', 'chaser']) if (!CHARACTERS[kind][d[kind]] || !d.chars.includes(d[kind])) d[kind] = DEFAULTS[kind];
   d.upgrades = { ...(d.upgrades || {}) };
   if (!Array.isArray(d.missions) || d.missions.length !== 3) {
     d.missions = [];
@@ -69,6 +77,16 @@ export function createProgress(storage) {
     },
     powerupTime(name) { return POWERUP_TIME[name] * (1 + 0.25 * this.upgradeLevel(name)); },
     select(id) { if (!d.owned.includes(id)) return false; d.skin = id; save(); return true; },
+    // kind: 'hero' | 'chaser'. Picks it if owned, else buys it (and picks it) if affordable.
+    pickChar(kind, id) {
+      const c = CHARACTERS[kind]?.[id];
+      if (!c) return false;
+      if (!d.chars.includes(id)) {
+        if (d.coins < c.price) return false;
+        d.coins -= c.price; d.chars.push(id);
+      }
+      d[kind] = id; save(); return true;
+    },
     setSetting(key, value) { if (key === 'muted' || key === 'vibrate' || key === 'tutorialDone') { d[key] = value; save(); } },
     // Missions reached during a run, reported once each (for a mid-run toast).
     liveMissions(stats) {

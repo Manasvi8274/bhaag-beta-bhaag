@@ -50,6 +50,29 @@ function buildBody(R) {
   return { group, joints: { body, pelvis, head, shoulderL, shoulderR, elbowL, elbowR, hipL, hipR, kneeL, kneeR } };
 }
 
+export const HEROES = ['beta', 'beti'];
+export const CHASERS = ['papa', 'mummy', 'dadi'];
+const capsuleMesh = (r, len, material, parent, x, y, z) => mesh(capsule(r, len), material, parent, x, y, z);
+
+// What each chaser waves (and throws): held in the right fist, sticking out so it reads from behind.
+function weapon(type, j) {
+  const hand = joint(j.elbowR, 0, -0.36, 0);
+  mesh(new THREE.SphereGeometry(0.075, 10, 8), BLACK, hand); // fist
+  if (type === 'papa') { // hawai chappal gripped by the heel
+    const sole = mesh(new THREE.BoxGeometry(0.19, 0.44, 0.04), mat(0xf5f5f0), hand, 0, -0.24, 0);
+    mesh(new THREE.BoxGeometry(0.2, 0.45, 0.03), mat(0x1d4ed8), sole, 0, 0, 0.032);
+    for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(0.03, 0.17, 0.035), mat(0x1d4ed8), sole, s * 0.05, 0.1, -0.035).rotation.z = s * 0.45;
+  } else if (type === 'mummy') { // belan (rolling pin)
+    const wood = mat(0xc68642);
+    mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.42, 12), wood, hand, 0, -0.26, 0);
+    for (const y of [-0.02, -0.52]) mesh(new THREE.CylinderGeometry(0.025, 0.025, 0.1, 8), mat(0x8b5a2b), hand, 0, y, 0);
+  } else { // dadi's lathi with a curved handle
+    const cane = mat(0x6b4226);
+    mesh(new THREE.CylinderGeometry(0.025, 0.025, 1.0, 8), cane, hand, 0, -0.45, 0);
+    mesh(new THREE.TorusGeometry(0.08, 0.025, 6, 12, Math.PI), cane, hand, 0.08, 0.04, 0).rotation.z = 0;
+  }
+}
+
 function addAccessories(type, group, j) {
   const skin = { cap: mat(0xd62828), bag: mat(0x1d4ed8) };
   if (type === 'beta') {
@@ -58,18 +81,30 @@ function addAccessories(type, group, j) {
     mesh(new THREE.CylinderGeometry(0.16, 0.16, 0.02, 16), red, j.head, 0, 0.03, -0.17);
     mesh(new THREE.BoxGeometry(0.06, 0.3, 0.02), red, j.pelvis, 0, 0.35, -0.12);
     mesh(new THREE.BoxGeometry(0.3, 0.35, 0.15), skin.bag, j.pelvis, 0, 0.35, 0.16);
-  } else {
+  } else if (type === 'beti') { // two choti with ribbons, school frock, same bag
+    for (const s of [-1, 1]) {
+      capsuleMesh(0.05, 0.22, BLACK, j.head, s * 0.2, -0.12, 0.06);
+      mesh(new THREE.BoxGeometry(0.12, 0.06, 0.06), skin.cap, j.head, s * 0.2, 0.0, 0.06); // ribbon bow
+    }
+    mesh(new THREE.CylinderGeometry(0.12, 0.27, 0.42, 16), skin.cap, j.pelvis, 0, 0.1, 0); // frock
+    mesh(new THREE.BoxGeometry(0.3, 0.35, 0.15), skin.bag, j.pelvis, 0, 0.35, 0.16);
+  } else if (type === 'papa') {
     group.scale.setScalar(1.12);
     const white = mat(0xf5f5f0);
     mesh(new THREE.CylinderGeometry(0.19, 0.22, 0.45, 16), white, j.pelvis, 0, 0.3, 0);
     mesh(new THREE.SphereGeometry(0.22, 16, 12), white, j.pelvis, 0, 0.18, -0.07);
     mesh(new THREE.BoxGeometry(0.2, 0.04, 0.05), BLACK, j.head, 0, -0.06, -0.19);
-    // Hawai chappal gripped by the heel, sticking out past the fist so it reads from behind
-    const chappal = joint(j.elbowR, 0, -0.36, 0);
-    mesh(new THREE.SphereGeometry(0.075, 10, 8), BLACK, chappal); // fist
-    const sole = mesh(new THREE.BoxGeometry(0.19, 0.44, 0.04), mat(0xf5f5f0), chappal, 0, -0.24, 0);
-    mesh(new THREE.BoxGeometry(0.2, 0.45, 0.03), mat(0x1d4ed8), sole, 0, 0, 0.032);
-    for (const s of [-1, 1]) mesh(new THREE.BoxGeometry(0.03, 0.17, 0.035), mat(0x1d4ed8), sole, s * 0.05, 0.1, -0.035).rotation.z = s * 0.45;
+    weapon(type, j);
+  } else { // mummy: pink saree with a gold pallu, bun, bindi / dadi: white saree, grey bun, specs, a little shorter
+    group.scale.setScalar(type === 'mummy' ? 1.05 : 0.98);
+    const saree = mat(type === 'mummy' ? 0xd63384 : 0xf2efe6), border = mat(type === 'mummy' ? 0xffc300 : 0x2a9d8f);
+    mesh(new THREE.CylinderGeometry(0.17, 0.32, 0.85, 16), saree, j.pelvis, 0, -0.2, 0); // skirt over the legs
+    mesh(new THREE.CylinderGeometry(0.17, 0.2, 0.42, 16), saree, j.pelvis, 0, 0.32, 0);
+    mesh(new THREE.BoxGeometry(0.06, 0.62, 0.36), border, j.pelvis, 0.05, 0.36, 0).rotation.x = 0.6; // pallu over the shoulder
+    mesh(new THREE.SphereGeometry(0.11, 12, 8), type === 'mummy' ? BLACK : mat(0xbdbdbd), j.head, 0, 0.06, 0.18); // bun
+    if (type === 'mummy') mesh(new THREE.SphereGeometry(0.025, 8, 6), mat(0xe00000), j.head, 0, 0.11, -0.195); // bindi
+    else for (const x of [-0.07, 0.07]) mesh(new THREE.TorusGeometry(0.05, 0.012, 6, 14), mat(0xcfcfcf), j.head, x, 0.04, -0.2);
+    weapon(type, j);
   }
   return skin;
 }
@@ -104,15 +139,16 @@ function targets(mode, s, t, phase, type) {
     }
     case 'spank': pair('elbow', 0.5); o['shoulderR.x'] = 2.6 + 0.9 * Math.sin(t * 16); o['elbowR.x'] = 0.8; o['shoulderL.x'] = 0.5; o['pelvis.x'] = -0.15; break;
   }
-  if (type === 'papa' && mode === 'run') { // chappal raised overhead, shaking it at Beta
+  if (CHASERS.includes(type) && mode === 'run') { // weapon raised overhead, shaking it at the kid
     o['shoulderR.x'] = 2.9 + 0.35 * Math.sin(t * 11);
     o['elbowR.x'] = 0.5 + 0.5 * Math.sin(t * 11 + 0.6);
+    if (type === 'dadi') { o['pelvis.x'] = -0.35; o['head.x'] = 0.25; } // a bit bent, still fast
   }
   return o;
 }
 
 export function createStickman(type) {
-  const R = type === 'papa' ? 0.1 : 0.085;
+  const R = HEROES.includes(type) ? 0.085 : 0.1;
   const { group, joints } = buildBody(R);
   const skin = addAccessories(type, group, joints);
   let mode = 'idle', phase = 0, t = 0;

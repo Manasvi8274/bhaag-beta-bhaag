@@ -8,7 +8,7 @@ const JOINTS = ['body', 'pelvis', 'head', 'shoulderL', 'shoulderR', 'elbowL', 'e
 const height = (g) => { g.updateMatrixWorld(true); const b = new THREE.Box3().setFromObject(g); return b.max.y - b.min.y; };
 const settle = (m, mode, secs = 1) => { m.setMode(mode); for (let i = 0; i < secs * 60; i++) m.update(1 / 60, 12); };
 
-for (const type of ['beta', 'papa']) {
+for (const type of ['beta', 'beti', 'papa', 'mummy', 'dadi']) {
   test(`${type}: structure`, () => {
     const m = createStickman(type);
     assert.ok(m.group instanceof THREE.Group);

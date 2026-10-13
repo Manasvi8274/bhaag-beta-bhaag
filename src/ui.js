@@ -63,6 +63,7 @@ function btn(parent, text, cls, onClick) {
   return b;
 }
 const hex = (n) => '#' + n.toString(16).padStart(6, '0');
+const CHAR_ICON = { beta: '👦', beti: '👧', papa: '👨', mummy: '👩', dadi: '👵' };
 const PU_ICON = { shield: '🛡️', magnet: '🟠', jump: '🥛', double: '✖2', cycle: '🚲' };
 
 export function createUI(root, h) {
@@ -80,9 +81,9 @@ export function createUI(root, h) {
   const mSound = btn(mTop, '🔊', 'icon alt', () => h.onSound());
   const mHead = el('div', 'col', null, menu);
   const title = el('h1', 'title o', null, mHead);
-  el('div', null, 'Bhaag Beta', title);
+  const titleHero = el('div', null, 'Bhaag Beta', title);
   el('div', null, 'Bhaag!', title);
-  el('div', 'sub o', 'Papa is coming with the chappal!', mHead);
+  const tagline = el('div', 'sub o', 'Papa is coming with the chappal!', mHead);
   const mBottom = el('div', 'col push', null, menu);
   const menuBest = el('div', 'stat o', '', mBottom);
   el('div', 'ver', `v${VERSION}`, menu);
@@ -181,9 +182,22 @@ export function createUI(root, h) {
       revive.dataset.afford = w >= reviveCost ? '1' : '';
       only(over);
     },
-    showShop(skins, data, upgrades = []) {
+    setCharacters(heroName, chaserLine) { titleHero.textContent = `Bhaag ${heroName}`; tagline.textContent = chaserLine; },
+    showShop(skins, data, upgrades = [], chars = null) {
       openPanel('Beta Ki Dukaan', (p) => {
         el('div', null, `🪙 ${data.coins}`, p).style.fontSize = '20px';
+        if (chars) for (const [kind, heading] of [['hero', 'Kaun bhaagega?'], ['chaser', 'Peeche kaun?']]) {
+          el('h3', null, heading, p);
+          for (const [id, c] of Object.entries(chars[kind])) {
+            const r = el('div', 'item', null, p);
+            el('div', 'pu', CHAR_ICON[id], r);
+            el('div', 'grow', c.name, r);
+            if (data[kind] === id) el('div', null, '✔ Chosen', r);
+            else if (data.chars.includes(id)) btn(r, 'Choose', 'ok', () => h.onChar(kind, id));
+            else btn(r, `🪙 ${c.price}`, 'gold', () => h.onChar(kind, id)).disabled = data.coins < c.price;
+          }
+        }
+        el('h3', null, 'Cap & Bag', p);
         for (const [id, s] of Object.entries(skins)) {
           const r = el('div', 'item', null, p);
           const sw = el('div', 'sw', null, r);
