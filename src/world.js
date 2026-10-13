@@ -356,6 +356,11 @@ export function createWorld(scene, seed = 1) {
   const arch = buildArch(), train = buildTrain();
   scene.add(arch.g, train);
   let trainWait = 3, archAt = null, honked = false;
+  const placeArch = (playerZ) => {
+    const b = Math.max(1, Math.floor((-playerZ - 15) / ZONE_LEN) + 1); // next area start ahead (or just passed)
+    if (b !== archAt) { archAt = b; arch.g.position.z = -b * ZONE_LEN - 5; arch.setZone(b % ZONES.length); }
+  };
+  placeArch(0);
   return {
     segments,
     train,
@@ -381,6 +386,7 @@ export function createWorld(scene, seed = 1) {
       segments.forEach((seg, i) => { seg.position.z = 0 - i * SEG_LEN; place(seg, i); });
       train.visible = false;
       trainWait = 3;
+      placeArch(0);
     },
     // Returns true the moment the train's horn should blow.
     update(playerZ, dt = 0) {
@@ -392,8 +398,7 @@ export function createWorld(scene, seed = 1) {
           place(seg, i);
         }
       });
-      const b = Math.floor((-playerZ - 15) / ZONE_LEN) + 1; // next area start ahead (or just passed)
-      if (b !== archAt) { archAt = b; arch.g.position.z = -b * ZONE_LEN - 5; arch.setZone(b % ZONES.length); }
+      placeArch(playerZ);
       let horn = false;
       if (train.visible) {
         train.position.z += 24 * dt;

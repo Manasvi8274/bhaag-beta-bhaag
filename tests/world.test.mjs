@@ -64,3 +64,15 @@ test('the train only runs on the Railway Colony tracks and blows its horn once p
   }
   assert.ok(seen > 0 && horns >= 2, `seen ${seen} horns ${horns}`);
 });
+
+test('the area arch waits at the next area start, never at the menu', () => {
+  const scene = new THREE.Scene();
+  const w = createWorld(scene);
+  let arch = null;
+  scene.children.forEach((c) => { if (!w.segments.includes(c) && c !== w.train) arch = c; });
+  assert.equal(arch.position.z, -ZONE_LEN - 5);
+  w.update(-ZONE_LEN - 30, 0);
+  assert.equal(arch.position.z, -2 * ZONE_LEN - 5);
+  w.reset();
+  assert.equal(arch.position.z, -ZONE_LEN - 5);
+});
