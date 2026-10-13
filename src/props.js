@@ -239,7 +239,7 @@ const BUILD = {
     const BODY = 0x1d8fbf, INK = 0x151515;
     for (const z of [-0.62, 0.62]) wheel(g, 0.22, 0.12, 0, 0.22, z);
     box(g, 0.5, 0.1, 0.8, 0x2b2b2b, 0, 0.35, 0.05); // floorboard
-    box(g, 0.62, 0.42, 0.85, BODY, 0, 0.6, -0.42).scale.y = 1;
+    box(g, 0.62, 0.42, 0.85, BODY, 0, 0.6, -0.42);
     box(g, 0.44, 0.12, 0.72, 0x222222, 0, 0.87, -0.38); // seat
     box(g, 0.58, 0.8, 0.1, BODY, 0, 0.72, 0.45).rotation.x = -0.18; // leg shield
     box(g, 0.2, 0.1, 0.36, BODY, 0, 0.5, 0.62); // mudguard
