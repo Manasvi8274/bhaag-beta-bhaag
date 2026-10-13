@@ -231,6 +231,7 @@ export function createUI(root, h) {
         }
         btn(p, 'Chalo, bhaago!', 'ok', () => { modal.classList.add('hidden'); onDone(); }).style.marginTop = '12px';
       });
+      panel.lastChild.remove(); // the generic Close: "Chalo" must run onDone (the daily reward comes next)
     },
     flash(text) { flashEl.textContent = text; replay(flashEl, 'go'); },
     hint(text) { hintEl.textContent = text; replay(hintEl, 'go'); },
