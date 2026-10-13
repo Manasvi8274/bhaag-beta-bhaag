@@ -335,7 +335,9 @@ export function startGame(canvas, uiRoot) {
         run.coins += n;
         run.stats.coins += n;
         fx.burst(item.x, item.y + 0.3, item.z, 0xffd60a, 5, { speed: 2, up: 2, life: 0.35 });
-        audio.play('coin');
+        run.streak = run.t - (run.lastCoinT ?? -9) < 0.4 ? (run.streak || 0) + 1 : 0; // a quick run of coins climbs in pitch
+        run.lastCoinT = run.t;
+        audio.play('coin', 2 ** (Math.min(run.streak, 12) / 24));
       } else {
         activate(run.pu, item.name, progress.powerupTime(item.name));
         run.stats.powerups += 1;
@@ -481,7 +483,7 @@ export function startGame(canvas, uiRoot) {
     run.stumbleT = Math.max(0, run.stumbleT - dt);
     run.invuln = Math.max(0, run.invuln - dt);
     const dust = updateWeather(dt) > 0.3 ? 0x9fc3e6 : 0xc9b79c; // splashes in the rain
-    if (p.grounded && !run.wasGrounded) fx.burst(p.x, p.y + 0.05, run.z, dust, 6, { speed: 2, up: 1, life: 0.4 });
+    if (p.grounded && !run.wasGrounded) { fx.burst(p.x, p.y + 0.05, run.z, dust, 6, { speed: 2, up: 1, life: 0.4 }); run.squash = 1; }
     else if (p.grounded && Math.random() < dt * (p.sliding ? 30 : 6)) fx.burst(p.x, p.y + 0.05, run.z + 0.3, dust, 1, { speed: 1, up: 1, life: 0.4, gravity: -3 });
     run.wasGrounded = p.grounded;
 
@@ -576,6 +578,9 @@ export function startGame(canvas, uiRoot) {
     const p = run.p;
     beta.group.position.set(p.x, p.y, run.z);
     beta.group.rotation.y = 0;
+    run.squash = Math.max(0, (run.squash || 0) - dt * 6); // landing squash
+    const q = Math.sin(run.squash * Math.PI) * 0.12;
+    beta.group.scale.set(1 + q, 1 - q * 1.4, 1 + q);
     papa.group.position.set(run.papaX, 0, run.z + run.papaZ);
     papa.group.rotation.y = 0;
     bubble.visible = state === 'playing' && (isActive(run.pu, 'shield') || (run.invuln > 0 && Math.floor(run.t * 10) % 2 === 0));
@@ -596,6 +601,7 @@ export function startGame(canvas, uiRoot) {
       shake = Math.max(0, shake - dt);
     }
     camera.lookAt(p.x * (caught ? 1 : 0.4), caught ? 1.1 + p.y : 1.2 + run.floorS, run.z - (caught ? -0.3 : 6));
+    if (!caught) camera.rotateZ((p.x - LANES[p.lane]) * 0.03); // lean into a lane change
     camera.fov = baseFov + ((run.speed - SPEED_START) / (SPEED_MAX - SPEED_START)) * 8; // speed feel
     camera.updateProjectionMatrix();
     speedLines.update(dt, camera, state === 'playing' ? Math.max(0, (run.speed - 20) / (SPEED_MAX - 20)) : 0, run.speed);
@@ -611,6 +617,7 @@ export function startGame(canvas, uiRoot) {
     papa.setMode('spank');
     bubble.visible = false;
     beta.group.position.set(-0.6, 0, 0);
+    beta.group.scale.setScalar(1);
     beta.group.rotation.y = -0.35;
     papa.group.position.set(0.9, 0, 0.8);
     papa.group.rotation.y = 0.35;

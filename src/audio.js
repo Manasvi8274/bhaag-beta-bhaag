@@ -39,7 +39,7 @@ export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAu
   const SOUNDS = {
     jump: () => tone('sine', 300, 750, 0.18, 0.4),
     slide: () => noise(0.3, 0.35, 'lowpass', 1200, 300),
-    coin: () => { const t = ctx.currentTime; tone('square', 988, 988, 0.07, 0.18, t); tone('square', 1319, 1319, 0.12, 0.18, t + 0.07); },
+    coin: (p = 1) => { const t = ctx.currentTime; tone('square', 988 * p, 988 * p, 0.07, 0.18, t); tone('square', 1319 * p, 1319 * p, 0.12, 0.18, t + 0.07); },
     stumble: () => { tone('sine', 140, 50, 0.25, 0.7); noise(0.1, 0.3, 'lowpass', 2000, 400); },
     whoosh: () => noise(0.35, 0.5, 'bandpass', 600, 2400),
     smack: () => noise(0.08, 0.9, 'highpass', 1500, 1500),
@@ -76,9 +76,9 @@ export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAu
         if (ctx.resume) ctx.resume();
       } catch { ctx = null; }
     },
-    play(name) {
+    play(name, arg) {
       if (muted || !ctx || !SOUNDS[name]) return;
-      try { SOUNDS[name](); } catch { /* audio is never worth a crash */ }
+      try { SOUNDS[name](arg); } catch { /* audio is never worth a crash */ }
     },
     setMuted(m) {
       muted = !!m;
