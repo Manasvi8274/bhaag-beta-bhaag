@@ -15,6 +15,7 @@ import { createUI } from './ui.js';
 import { createAudio } from './audio.js';
 import { createFx, createSpeedLines } from './fx.js';
 import { createAds, createWebAds } from './ads.js';
+import { drawCard, shareRun } from './share.js';
 import { createProgress, SKINS, CHARACTERS } from './progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL, POWERUP_TIME } from './powerups.js';
 
@@ -135,6 +136,7 @@ export function startGame(canvas, uiRoot) {
       ui.showShop(SKINS, progress.data, upgradeList(), CHARACTERS);
       ui.setWallet(progress.data.coins);
     },
+    onShare,
     onMissions: () => ui.showMissions(progress.data.missions, progress.multiplier()),
     onClaimDaily() { progress.claimDaily(today()); ui.setWallet(progress.data.coins); audio.play('powerup'); },
   });
@@ -244,6 +246,20 @@ export function startGame(canvas, uiRoot) {
     if (earned && state === 'over') { run.adUsed = true; revive(true); return; }
     ui.setAdLoading(false);
     if (state === 'over') ui.toast('Ad not finished or not available - try again');
+  }
+
+  // Score card from the caught scene itself (chaser mid-spank), then the share sheet.
+  const runInfo = () => ({ distance: run.stats.distance, score: run.score, area: ZONES[run.zone].name, chaser: progress.data.chaser, hero: progress.data.hero });
+  function onShare() {
+    if (state !== 'over') return;
+    const info = runInfo(), card = document.createElement('canvas');
+    renderer.render(scene, camera); // read right after drawing: the WebGL buffer is still valid
+    drawCard(card.getContext('2d'), renderer.domElement, info);
+    card.toBlob(async (blob) => {
+      const r = await shareRun(blob, info);
+      if (r === 'copied') ui.toast('Copied! Paste it to your friends 📋');
+      else if (r === 'failed') ui.toast('Could not share on this device');
+    }, 'image/png');
   }
 
   function enterCaught() {
@@ -485,7 +501,8 @@ export function startGame(canvas, uiRoot) {
       state = 'over';
       ui.showGameOver({ score: run.score, coins: run.coins, best: progress.data.best, isNewBest: r.isNewBest,
         where: `🏁 ${run.stats.distance} m · ${ZONES[run.zone].name}`,
-        completed: r.completed, reviveCost: reviveCost(), wallet: progress.data.coins, adAvailable: ads.available && !run.adUsed });
+        completed: r.completed, reviveCost: reviveCost(), wallet: progress.data.coins, adAvailable: ads.available && !run.adUsed,
+        canShare: !!(navigator.share || navigator.clipboard) });
     }
   }
 

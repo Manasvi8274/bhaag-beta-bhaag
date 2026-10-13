@@ -7,8 +7,8 @@ const CSS = `
 #ui * { box-sizing: border-box; }
 #ui .o { text-shadow: ${OUTLINE}; }
 #ui .hidden { display: none !important; }
-#ui .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 8px; background: rgba(10,10,30,0.55); pointer-events: auto; text-align: center; padding: ${SAFE}; }
+#ui .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: safe center;
+  gap: 8px; background: rgba(10,10,30,0.55); pointer-events: auto; text-align: center; padding: ${SAFE}; overflow-y: auto; }
 #ui .menu { justify-content: flex-start; } #ui .menu .push { margin-top: auto; } #ui .menu { background: linear-gradient(rgba(10,10,30,.55), transparent 35%, transparent 65%, rgba(10,10,30,.6)); }
 #ui .col { display: flex; flex-direction: column; align-items: center; gap: 6px; }
 #ui .bar { width: 100%; display: flex; justify-content: space-between; align-items: center; gap: 8px; padding: 10px 14px 0; }
@@ -120,7 +120,9 @@ export function createUI(root, h) {
   const revive = btn(over, '', 'ok', () => h.onRevive());
   const adBtn = btn(over, '📺 Watch ad to escape', 'alt', () => h.onWatchAd());
   btn(over, '↻ Bhaag Again', 'big', () => h.onRestart());
-  btn(over, '🏠 Home', 'gold', () => h.onHome());
+  const oRow = el('div', 'row', null, over);
+  const shareBtn = btn(oRow, '📤 Share', 'alt', () => h.onShare());
+  btn(oRow, '🏠 Home', 'gold', () => h.onHome());
 
   // Modal (shop / missions / daily)
   const modal = el('div', 'screen hidden', null, root);
@@ -166,8 +168,9 @@ export function createUI(root, h) {
       pSound.textContent = `${soundLabel(muted)} Sound ${muted ? 'Off' : 'On'}`;
       pVibe.textContent = `📳 Vibration ${vibrate ? 'On' : 'Off'}`;
     },
-    showGameOver({ score: s, coins: c, best, isNewBest, completed, reviveCost, wallet: w, adAvailable, where = '' }) {
+    showGameOver({ score: s, coins: c, best, isNewBest, completed, reviveCost, wallet: w, adAvailable, where = '', canShare = false }) {
       oWhere.textContent = where;
+      shareBtn.classList.toggle('hidden', !canShare);
       adBtn.classList.toggle('hidden', !adAvailable);
       adBtn.disabled = false;
       adBtn.textContent = '📺 Watch ad to escape';
