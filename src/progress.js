@@ -7,6 +7,9 @@ export const SKINS = {
   hara: { name: 'Hara Bhara', cap: 0x2a9d8f, bag: 0xe9c46a, price: 600 },
   gulabi: { name: 'Gulabi', cap: 0xff70a6, bag: 0x8338ec, price: 1000 },
   sona: { name: 'Sone Ka Beta', cap: 0xffc300, bag: 0x1b1b1b, price: 2500 },
+  tiranga: { name: 'Tiranga', cap: 0xff9933, bag: 0x138808, price: 1500 },
+  raat: { name: 'Raat Ka Raja', cap: 0x1d3557, bag: 0xc0c0c0, price: 2000 },
+  holi: { name: 'Holi Hai', cap: 0xff1f8e, bag: 0xffd60a, price: 4000 },
 };
 
 // Who runs, and who chases. Bought once with coins, then picked in the shop.
