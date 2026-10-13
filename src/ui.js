@@ -16,6 +16,7 @@ const CSS = `
 #ui .sub { font-size: 19px; } #ui .stat { font-size: 24px; }
 #ui button { font: inherit; font-size: 22px; padding: 12px 30px; border-radius: 999px; background: #ff006e; color: #fff;
   border: 4px solid #1b1b1b; box-shadow: 0 6px 0 #1b1b1b; cursor: pointer; text-shadow: none; }
+#ui button, #ui .pill { white-space: nowrap; }
 #ui button:active { transform: translateY(4px); box-shadow: 0 2px 0 #1b1b1b; }
 #ui button.big { font-size: 30px; padding: 14px 46px; }
 #ui button.alt { background: #3a86ff; } #ui button.ok { background: #2a9d8f; } #ui button.gold { background: #ffbe0b; color: #1b1b1b; }
@@ -78,6 +79,7 @@ export function createUI(root, h) {
   const menu = el('div', 'screen menu', null, root);
   const mTop = el('div', 'bar', null, menu);
   const wallet = el('div', 'pill o', '🪙 0', mTop);
+  const install = btn(mTop, '📲 Install', 'icon ok hidden', () => h.onInstall());
   const mSound = btn(mTop, '🔊', 'icon alt', () => h.onSound());
   const mHead = el('div', 'col', null, menu);
   const title = el('h1', 'title o', null, mHead);
@@ -152,6 +154,7 @@ export function createUI(root, h) {
     setChallenge(goal, reward, done) {
       challenge.textContent = done ? `📅 Challenge done ✔ · play again` : `📅 Aaj ka Challenge: ${goal} m · 🪙${reward}`;
     },
+    setInstallable(on) { install.classList.toggle('hidden', !on); },
     setWallet(w) { wallet.textContent = `🪙 ${w}`; },
     showHUD() { only(hud); },
     setScore(s, c, mult) {

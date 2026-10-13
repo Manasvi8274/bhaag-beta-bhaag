@@ -26,6 +26,10 @@
   <canvas id="game"></canvas>
   <div id="ui"></div>
   <div id="loading"><img src="icons/icon-192.png" alt=""><div>Bhaag Beta Bhaag!</div><small>Papa is putting on his chappal...</small></div>
+  <script>
+    // Keep the browser's "install this app" offer for the menu's Install button (it can fire before the game loads).
+    addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); window.bbbInstall = e; dispatchEvent(new Event('bbb-install')); });
+  </script>
   <script type="module">
     const loading = document.getElementById('loading');
     try {

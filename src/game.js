@@ -145,11 +145,21 @@ export function startGame(canvas, uiRoot) {
       ui.setWallet(progress.data.coins);
     },
     onShare,
+    async onInstall() {
+      const e = window.bbbInstall;
+      if (!e) return;
+      window.bbbInstall = null;
+      ui.setInstallable(false);
+      try { await e.prompt(); } catch { /* dismissed */ }
+    },
 
     onClaimDaily() { progress.claimDaily(today()); ui.setWallet(progress.data.coins); audio.play('powerup'); },
   });
   ui.setSettings(progress.data);
   applyCharacters();
+  ui.setInstallable(!!window.bbbInstall);
+  window.addEventListener('bbb-install', () => ui.setInstallable(true));
+  window.addEventListener('appinstalled', () => ui.setInstallable(false));
   const upgradeList = () => Object.keys(POWERUP_TIME).map((name) => ({
     name, label: POWERUP_LABEL[name], level: progress.upgradeLevel(name), cost: progress.upgradeCost(name), secs: progress.powerupTime(name),
   }));
