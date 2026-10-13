@@ -9,6 +9,7 @@ import { createProp, setPropsNight } from './props.js';
 import { createWorld, lampForLight, LAMP_HEAD_Y } from './world.js';
 import { createSky } from './sky.js';
 import { skyAt, menuTime } from './daynight.js';
+import { ZONES, zoneAt } from './zones.js';
 import { createInput } from './input.js';
 import { createUI } from './ui.js';
 import { createAudio } from './audio.js';
@@ -110,7 +111,7 @@ export function startGame(canvas, uiRoot) {
       p: createPlayer(), z: 0, speed: SPEED_START, prevLane: 1, t: 0, hint: 0,
       spawner: createSpawner((Math.random() * 1e9) | 0), chaser: createChaser(), pu: createPowerups(),
       items: [], hitSet: new Set(), coins: 0, committed: 0, score: 0, stumbleT: 0, invuln: 0,
-      caughtT: 0, smackT: 0, papaZ: 3, papaX: 0, ground: 0, floorS: 0, pendingThrow: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
+      caughtT: 0, smackT: 0, papaZ: 3, papaX: 0, zone: 0, ground: 0, floorS: 0, pendingThrow: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
       stats: { score: 0, coins: 0, distance: 0, jumps: 0, slides: 0, powerups: 0, dodges: 0 },
     };
     if (progress.data.tutorialDone) run.hint = HINTS.length;
@@ -316,10 +317,23 @@ export function startGame(canvas, uiRoot) {
     }
   }
 
+  // Scooters ride towards Beta once he is close (a horn warns first).
+  function updateMovers(dt) {
+    for (const { item, mesh } of run.items) {
+      if (!item.vz || item.z < run.z - 28 || item.z > run.z + 6) continue;
+      if (!item.honked) { item.honked = true; audio.play('horn'); }
+      item.z += item.vz * dt;
+      mesh.position.z = item.z;
+    }
+  }
+
   function updatePlaying(dt) {
     const p = run.p;
     run.dt = dt;
     run.t += dt;
+    const zone = zoneAt(run.z);
+    if (zone !== run.zone) { run.zone = zone; ui.flash(`📍 ${ZONES[zone].name}`); audio.play('bell'); }
+    audio.setTempo((run.speed - SPEED_START) / (SPEED_MAX - SPEED_START));
     if (run.hint < HINTS.length && run.t >= HINTS[run.hint][0]) ui.hint(HINTS[run.hint++][1]);
     run.speed = Math.min(SPEED_MAX, run.speed + SPEED_RAMP * dt);
     run.z -= run.speed * dt;
@@ -327,6 +341,7 @@ export function startGame(canvas, uiRoot) {
     updatePlayer(p, dt, run.ground);
     updateChaser(run.chaser, dt);
     updateChappals(dt);
+    updateMovers(dt);
     updatePowerups(run.pu, dt);
     run.stumbleT = Math.max(0, run.stumbleT - dt);
     run.invuln = Math.max(0, run.invuln - dt);
@@ -380,6 +395,7 @@ export function startGame(canvas, uiRoot) {
     hemi.color.lerpColors(HEMI_DAY, HEMI_NIGHT, s.night);
     hemi.groundColor.lerpColors(GROUND_DAY, GROUND_NIGHT, s.night);
     world.setNight(s.night, clockT);
+    audio.setNight(s.night);
     setPropsNight(s.night);
     const lit = world.lampLevel();
     lampLights.forEach((l, j) => {
@@ -417,7 +433,7 @@ export function startGame(canvas, uiRoot) {
     camera.lookAt(p.x * (caught ? 1 : 0.4), caught ? 1.1 + p.y : 1.2 + run.floorS, run.z - (caught ? -0.3 : 6));
     camera.fov = baseFov + ((run.speed - SPEED_START) / (SPEED_MAX - SPEED_START)) * 8; // speed feel
     camera.updateProjectionMatrix();
-    world.update(run.z);
+    if (world.update(run.z, dt)) audio.play('train');
     applySky(run.t, run.z, run.t);
   }
 
@@ -474,6 +490,7 @@ export function startGame(canvas, uiRoot) {
       for (const { item, mesh } of run ? run.items : []) {
         if (item.type === 'coin') mesh.rotation.y += dt * 4;
         else if (item.type === 'powerup') { mesh.rotation.y += dt * 2; mesh.position.y = item.y - 0.4 + Math.sin(run.t * 4) * 0.1; }
+        else if (item.name === 'dog') mesh.scale.y = 1 + Math.sin(run.t * 2.5) * 0.05; // snoring
       }
     }
     renderer.render(scene, camera);

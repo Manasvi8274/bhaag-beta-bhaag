@@ -5,7 +5,7 @@ import { createProp } from '../src/props.js';
 
 const SIZES = {
   ramp: [1.6, 3.2, 6], bricks: [1.2, 0.5, 0.8], barricade: [1.4, 0.9, 0.5], banner: [6.4, 2.4, 0.2], pothole: [1.4, 0.3, 1.2], cow: [1.0, 1.6, 2.4],
-  auto: [1.6, 2.0, 2.8], cart: [1.4, 1.3, 2.0], bus: [1.9, 3.2, 8], coin: [0.6, 0.6, 0.08],
+  auto: [1.6, 2.0, 2.8], cart: [1.4, 1.3, 2.0], bus: [1.9, 3.2, 8], scooter: [0.9, 1.7, 1.8], dog: [1.2, 0.45, 0.6], pipe: [1.4, 0.9, 0.9], coin: [0.6, 0.6, 0.08],
 };
 
 for (const [name, [w, h, d]] of Object.entries(SIZES)) {

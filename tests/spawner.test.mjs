@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { mulberry32, CATALOG, createSpawner, spawnUntil, POWERUP_KINDS } from '../src/spawner.js';
+import { zoneAt, ZONE_LEN } from '../src/zones.js';
+
+test('areas change every ZONE_LEN metres and loop', () => {
+  assert.equal(zoneAt(0), 0); assert.equal(zoneAt(5), 0);
+  assert.equal(zoneAt(-ZONE_LEN + 1), 0); assert.equal(zoneAt(-ZONE_LEN), 1);
+  assert.equal(zoneAt(-2 * ZONE_LEN - 1), 2); assert.equal(zoneAt(-3 * ZONE_LEN), 0);
+});
 
 test('rng deterministic and in range', () => {
   const a = mulberry32(7), b = mulberry32(7);
@@ -12,7 +19,7 @@ test('catalog', () => {
   assert.deepEqual(CATALOG.cow, { kind: 'block', w: 1.2, h: 1.6, d: 2.4, y: 0 });
   assert.equal(CATALOG.banner.kind, 'high');
   assert.equal(CATALOG.banner.y, 1.0);
-  assert.deepEqual(Object.keys(CATALOG).sort(), ['auto', 'banner', 'barricade', 'bricks', 'bus', 'cart', 'cow', 'pothole']);
+  assert.deepEqual(Object.keys(CATALOG).sort(), ['auto', 'banner', 'barricade', 'bricks', 'bus', 'cart', 'cow', 'dog', 'pipe', 'pothole', 'scooter']);
 });
 
 const rowsOf = (items) => {
@@ -73,7 +80,10 @@ test('every row is passable and items are well formed', () => {
     }
   }
   const types = new Set(items.filter(i => i.type === 'obstacle').map(i => i.name));
-  assert.equal(types.size, 8, 'all obstacle types appear');
+  assert.equal(types.size, 11, 'all obstacle types appear');
+  for (const it of items) if (it.name === 'scooter') assert.equal(it.vz, CATALOG.scooter.vz);
+  // each area has its own mix: pipes only in the Railway Colony
+  for (const it of items) if (it.name === 'pipe') assert.equal(zoneAt(it.z), 1, `pipe at ${it.z}`);
 });
 
 test('some buses get a ramp and roof coins, nothing else sits on a ramp', () => {

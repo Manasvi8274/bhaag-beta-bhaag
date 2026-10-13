@@ -1,6 +1,6 @@
 // Procedural SFX + dhol loop. Never throws, even without Web Audio.
 export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAudioContext) {
-  let ctx = null, master = null, muted = !Ctx, timer = null, nextNote = 0, step = 0;
+  let ctx = null, master = null, muted = !Ctx, timer = null, nextNote = 0, step = 0, stepDur = 0.25, night = 0;
 
   function envelope(vol, when, dur) {
     const g = ctx.createGain();
@@ -44,6 +44,10 @@ export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAu
     whoosh: () => noise(0.35, 0.5, 'bandpass', 600, 2400),
     smack: () => noise(0.08, 0.9, 'highpass', 1500, 1500),
     powerup: () => { const t = ctx.currentTime; [523, 659, 784, 1047].forEach((f, i) => tone('triangle', f, f, 0.12, 0.25, t + i * 0.08)); },
+    horn: () => { const t = ctx.currentTime; for (const d of [0, 0.18]) tone('square', 440, 430, 0.13, 0.12, t + d); }, // scooter: pom pom
+    train: () => { const t = ctx.currentTime; tone('sawtooth', 311, 305, 1.3, 0.1, t); tone('sawtooth', 392, 385, 1.3, 0.08, t); },
+    bell: () => { const t = ctx.currentTime; tone('sine', 1318, 1310, 1.6, 0.22, t); tone('sine', 2637, 2620, 0.7, 0.08, t); tone('triangle', 659, 655, 1.2, 0.12, t); },
+    cricket: () => { const t = ctx.currentTime; for (let i = 0; i < 3; i++) tone('sine', 4300, 4200, 0.03, 0.04, t + i * 0.06); },
   };
 
   function beat(s, when) {
@@ -77,15 +81,19 @@ export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAu
       nextNote = ctx.currentTime + 0.05;
       timer = setInterval(() => {
         try {
-          // 120 BPM -> 8th note = 0.25 s; schedule everything within the next 0.15 s
+          // 120 BPM -> 8th note = 0.25 s (faster at speed); schedule everything within the next 0.15 s
           while (nextNote < ctx.currentTime + 0.15) {
             if (!muted) beat(step, nextNote);
             step = (step + 1) % 8;
-            nextNote += 0.25;
+            nextNote += stepDur;
           }
+          if (!muted && night > 0.5 && Math.random() < 0.03) SOUNDS.cricket(); // jhingur at night
         } catch { /* keep looping */ }
       }, 50);
     },
     stopMusic() { clearInterval(timer); timer = null; },
+    // f: 0 = starting speed .. 1 = top speed; the dhol speeds up from 120 to ~150 BPM.
+    setTempo(f) { stepDur = 0.25 - 0.05 * Math.max(0, Math.min(1, f)); },
+    setNight(n) { night = n; },
   };
 }

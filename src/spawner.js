@@ -1,3 +1,5 @@
+import { ZONES, zoneAt } from './zones.js';
+
 export function mulberry32(seed) {
   return function () {
     seed |= 0; seed = (seed + 0x6D2B79F5) | 0;
@@ -16,17 +18,20 @@ export const CATALOG = {
   auto: { kind: 'block', w: 1.6, h: 2.0, d: 2.8, y: 0 },
   cart: { kind: 'block', w: 1.4, h: 1.3, d: 2.0, y: 0 },
   bus: { kind: 'block', w: 1.9, h: 3.2, d: 8, y: 0 },
+  scooter: { kind: 'block', w: 0.9, h: 1.7, d: 1.8, y: 0, vz: 3.5 }, // rides towards Beta once he is near (game.js)
+  dog: { kind: 'low', w: 1.2, h: 0.45, d: 0.6, y: 0 },
+  pipe: { kind: 'low', w: 1.4, h: 0.9, d: 0.9, y: 0 },
 };
 
 const LANE_X = [-2, 0, 2];
 const RAMP_LEN = 6;
-const BLOCKS = ['cow', 'auto', 'cart', 'bus'];
-const LOWS = ['bricks', 'pothole', 'barricade'];
 export const POWERUP_KINDS = ['shield', 'magnet', 'jump', 'double'];
 
 function obstacle(name, x, z) {
   const c = CATALOG[name];
-  return { type: 'obstacle', name, kind: c.kind, x, y: c.y, z, w: c.w, h: c.h, d: c.d };
+  const o = { type: 'obstacle', name, kind: c.kind, x, y: c.y, z, w: c.w, h: c.h, d: c.d };
+  if (c.vz) o.vz = c.vz;
+  return o;
 }
 
 function coins(x, y, z, count) {
@@ -36,7 +41,7 @@ function coins(x, y, z, count) {
 }
 
 function makeRow(rng, z) {
-  const items = [];
+  const items = [], { blocks, lows } = ZONES[zoneAt(z)];
   if (rng() < 0.15) {
     items.push(obstacle('banner', 0, z));
     items.push(...coins(pick(rng, LANE_X), 0.4, z, 4));
@@ -47,7 +52,7 @@ function makeRow(rng, z) {
   const blockCount = Math.floor(rng() * 3);
   const lowLanes = new Set();
   for (let i = 0; i < blockCount; i++) {
-    const name = pick(rng, BLOCKS), x = LANE_X[lanes[i]];
+    const name = pick(rng, blocks), x = LANE_X[lanes[i]];
     items.push(obstacle(name, x, z));
     if (name === 'bus' && rng() < 0.6) { // ramp up to the roof, with a coin trail on top
       items.push({ type: 'ramp', name: 'ramp', x, y: 0, z: z + 4 + RAMP_LEN / 2, w: 1.6, h: CATALOG.bus.h, d: RAMP_LEN });
@@ -55,7 +60,7 @@ function makeRow(rng, z) {
     }
   }
   for (let i = blockCount; i < 3; i++) {
-    if (rng() < 0.4) { items.push(obstacle(pick(rng, LOWS), LANE_X[lanes[i]], z)); lowLanes.add(lanes[i]); }
+    if (rng() < 0.4) { items.push(obstacle(pick(rng, lows), LANE_X[lanes[i]], z)); lowLanes.add(lanes[i]); }
   }
   const coinLane = lanes[blockCount];
   if (lowLanes.has(coinLane)) items.push(...coins(LANE_X[coinLane], 0.8, z - 3, 4));

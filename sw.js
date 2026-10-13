@@ -4,7 +4,7 @@ const VERSION = 'bbb-v9';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './privacy.html', './icons/icon-192.png', './icons/icon-512.png',
   './vendor/three.module.js',
-  ...['ads', 'audio', 'chaser', 'collision', 'config', 'daynight', 'fx', 'game', 'input', 'player', 'powerups', 'progress', 'props', 'sky',
+  ...['ads', 'audio', 'chaser', 'collision', 'config', 'daynight', 'fx', 'game', 'input', 'player', 'powerups', 'progress', 'props', 'sky', 'zones',
     'spawner', 'stickman', 'ui', 'world'].map((m) => `./src/${m}.js`),
 ];
 

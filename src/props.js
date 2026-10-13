@@ -31,6 +31,13 @@ function wheel(g, r, w, x, y, z) {
   cyl(g, r * 0.5, r * 0.5, w + 0.02, 0xb8b8b8, x, y, z, { metalness: 0.6, roughness: 0.35 }).rotation.z = Math.PI / 2;
 }
 
+// Capsule from point a to point b (stickman limbs).
+function limb(g, a, b, r, color) {
+  const A = new THREE.Vector3(...a), B = new THREE.Vector3(...b);
+  const m = add(g, new THREE.CapsuleGeometry(r, A.distanceTo(B), 4, 8), color, (A.x + B.x) / 2, (A.y + B.y) / 2, (A.z + B.z) / 2);
+  m.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), B.sub(A).normalize());
+}
+
 // Vehicles and animals face +z, towards the player who runs down -z.
 const BUILD = {
   bricks(g) { // ent ka dher: half-used pile of red bricks from a building site
@@ -181,6 +188,50 @@ const BUILD = {
     box(g, 0.5, 0.2, 0.04, 0xffffff, 0, 0.82, 4.03);
     for (const s of [-1, 1]) box(g, 0.06, 0.3, 0.1, 0x1b1b1b, s * 1.0, 2.2, 3.9); // mirrors
     for (const x of [-0.85, 0.85]) for (const z of [-2.8, 2.6]) wheel(g, 0.42, 0.3, x, 0.42, z);
+  },
+  scooter(g) { // uncle on his scooter, coming the wrong way: a stickman in a yellow helmet
+    const BODY = 0x1d8fbf, INK = 0x151515;
+    for (const z of [-0.62, 0.62]) wheel(g, 0.22, 0.12, 0, 0.22, z);
+    box(g, 0.5, 0.1, 0.8, 0x2b2b2b, 0, 0.35, 0.05); // floorboard
+    box(g, 0.62, 0.42, 0.85, BODY, 0, 0.6, -0.42).scale.y = 1;
+    box(g, 0.44, 0.12, 0.72, 0x222222, 0, 0.87, -0.38); // seat
+    box(g, 0.58, 0.8, 0.1, BODY, 0, 0.72, 0.45).rotation.x = -0.18; // leg shield
+    box(g, 0.2, 0.1, 0.36, BODY, 0, 0.5, 0.62); // mudguard
+    cyl(g, 0.035, 0.035, 0.62, 0x333333, 0, 1.02, 0.56, undefined, 6).rotation.x = -0.25;
+    box(g, 0.72, 0.05, 0.05, 0x333333, 0, 1.3, 0.63); // handlebar
+    ball(g, 0.08, 0xfff3b0, 0, 1.2, 0.7, glow(0xffe08a));
+    box(g, 0.2, 0.08, 0.03, 0xff2d2d, 0, 0.68, -0.86, glow(0xaa0000));
+    for (const s of [-1, 1]) {
+      box(g, 0.03, 0.2, 0.03, 0x333333, s * 0.38, 1.42, 0.6);
+      box(g, 0.1, 0.07, 0.03, 0xc0c0c0, s * 0.4, 1.55, 0.6, { metalness: 0.6, roughness: 0.3 });
+      limb(g, [s * 0.17, 1.52, -0.28], [s * 0.3, 1.3, 0.6], 0.05, INK); // arm to the handlebar
+      limb(g, [s * 0.1, 0.98, -0.36], [s * 0.15, 1.08, 0.12], 0.06, INK); // thigh
+      limb(g, [s * 0.15, 1.08, 0.12], [s * 0.15, 0.44, 0.24], 0.055, INK); // shin to the floorboard
+    }
+    limb(g, [0, 0.98, -0.36], [0, 1.52, -0.24], 0.1, INK); // body
+    ball(g, 0.16, INK, 0, 1.7, -0.22);
+    add(g, new THREE.SphereGeometry(0.18, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2), 0xffd60a, 0, 1.72, -0.22);
+    box(g, 0.24, 0.05, 0.02, 0x9fd8ff, 0, 1.69, -0.05, { roughness: 0.1 }); // visor
+  },
+  dog(g) { // street dog fast asleep across the lane: jump it, don't wake it
+    const TAN = 0xc68642, DARK = 0x6b4226;
+    add(g, new THREE.CapsuleGeometry(0.2, 0.5, 6, 12), TAN, 0, 0.2, 0).rotation.z = Math.PI / 2;
+    ball(g, 0.13, 0xf5e6d0, 0.05, 0.33, 0.04).scale.set(1.6, 0.5, 1);
+    ball(g, 0.15, TAN, 0.52, 0.17, 0.06);
+    box(g, 0.13, 0.09, 0.17, TAN, 0.58, 0.12, 0.2);
+    ball(g, 0.035, 0x111111, 0.58, 0.15, 0.29);
+    for (const x of [0.45, 0.6]) cyl(g, 0.0, 0.05, 0.11, DARK, x, 0.31, 0.02, undefined, 6);
+    for (const x of [-0.32, -0.18, 0.18, 0.3]) add(g, new THREE.CapsuleGeometry(0.04, 0.2, 4, 6), TAN, x, 0.07, 0.2).rotation.x = Math.PI / 2;
+    add(g, new THREE.CapsuleGeometry(0.035, 0.28, 4, 6), DARK, -0.42, 0.1, 0.2).rotation.set(1.2, 0, 0.5);
+  },
+  pipe(g) { // cement pipe for the new drain, rolled across the lane: jump it
+    const p = cyl(g, 0.45, 0.45, 1.3, 0x9e9e9e, 0, 0.45, 0, undefined, 20);
+    p.rotation.z = Math.PI / 2;
+    for (const s of [-1, 1]) {
+      add(g, new THREE.CircleGeometry(0.35, 20), 0x2a2a2a, s * 0.652, 0.45, 0).rotation.y = s * Math.PI / 2;
+      cyl(g, 0.455, 0.455, 0.07, 0xc1121f, s * 0.42, 0.45, 0, undefined, 20).rotation.z = Math.PI / 2;
+      for (const x of [-0.4, 0.4]) box(g, 0.14, 0.12, 0.22, 0x8a5a2b, x, 0.06, s * 0.43);
+    }
   },
   // Power-ups: ~0.8 tall, bottom at 0, glowing so they read at speed.
   shield(g) {
