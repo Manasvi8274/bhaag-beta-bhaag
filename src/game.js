@@ -20,7 +20,7 @@ import { createPowerups, activate, updatePowerups, isActive, consume, listActive
 
 const CAUGHT_SCENE_TIME = 2.2;
 const THROW_WINDUP = 0.55, CHAPPAL_REL_SPEED = 6; // warning time, and how much faster than Beta it flies
-const LAMP_LIGHTS = 3; // real lights hopping between streetlights near Beta; the rest are emissive + glow decals
+const LAMP_LIGHTS = 2; // real lights hopping between streetlights near Beta; the rest are emissive + glow decals
 const HEMI_DAY = new THREE.Color(0xffffff), HEMI_NIGHT = new THREE.Color(0x7d8fd8);
 const GROUND_DAY = new THREE.Color(0x8a7a66), GROUND_NIGHT = new THREE.Color(0x3a3440);
 const HINTS = [[0.8, '👈 Swipe left / right 👉'], [4.5, '👆 Swipe up to jump'], [8, '👇 Swipe down to slide']];
@@ -401,11 +401,9 @@ export function startGame(canvas, uiRoot) {
     lampLights.forEach((l, j) => {
       const lamp = lampForLight(j, LAMP_LIGHTS, playerZ);
       l.position.set(lamp.x * 0.35, LAMP_HEAD_Y - 1.5, lamp.z); // pulled toward the road so walls stay dark
-      l.intensity = lit * 22;
-      l.visible = lit > 0;
+      l.intensity = lit * 22; // never toggle .visible: a changing light count recompiles every shader (a stutter)
     });
     betaLight.intensity = s.night * 9;
-    betaLight.visible = s.night > 0;
     sky.update(camera, s, clockT);
   }
 
@@ -496,7 +494,7 @@ export function startGame(canvas, uiRoot) {
     renderer.render(scene, camera);
   }
 
-  // Adaptive quality: if the phone averages under ~45 fps for 3 s, step down (sharpness, then shadows).
+  // Adaptive quality: if the phone averages under ~45 fps for 3 s, step down (sharpness, then shadows + real lamp lights).
   let perfT = 0, perfFrames = 0, quality = 2;
   function watchPerf(rawDt) {
     perfT += rawDt; perfFrames += 1;
@@ -506,7 +504,10 @@ export function startGame(canvas, uiRoot) {
     if (!slow || quality === 0) return;
     quality -= 1;
     if (quality === 1) renderer.setPixelRatio(1);
-    else { renderer.shadowMap.type = THREE.BasicShadowMap; sun.shadow.mapSize.set(512, 512); sun.shadow.map?.dispose(); sun.shadow.map = null; }
+    else {
+      renderer.shadowMap.type = THREE.BasicShadowMap; sun.shadow.mapSize.set(512, 512); sun.shadow.map?.dispose(); sun.shadow.map = null;
+      for (const l of lampLights) l.visible = false; // glow decals still show the lamps; shaders recompile once, here
+    }
     resize();
   }
 
@@ -523,6 +524,6 @@ export function startGame(canvas, uiRoot) {
   // Dev hooks: #play skips the menu, #debug exposes a stepper for automated checks.
   if (location.hash.includes('play')) begin();
   if (location.hash.includes('debug')) {
-    window.bbb = { frame, onAction, begin, revive, watchAd, setAds: (a) => { ads = a; }, get state() { return state; }, get run() { return run; }, progress };
+    window.bbb = { frame, onAction, begin, revive, watchAd, setAds: (a) => { ads = a; }, get state() { return state; }, get run() { return run; }, progress, renderer, scene, camera };
   }
 }

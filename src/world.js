@@ -1,6 +1,7 @@
 import * as THREE from '../vendor/three.module.js';
 import { mulberry32 } from './spawner.js';
 import { ZONES, ZONE_LEN, zoneAt } from './zones.js';
+import { mergeStatic } from './merge.js';
 
 export const SEG_LEN = 30;
 export const SEG_COUNT = 8;
@@ -122,6 +123,7 @@ const STYLE = [
 
 function building(seg, rng, side, z, st) {
   const h = st.h[0] + rng() * st.h[1];
+  (seg.userData.heights ||= []).push(h);
   const face = side * 5.5; // road-facing wall
   add(seg, new THREE.BoxGeometry(6, h, st.depth), st.walls[Math.floor(rng() * st.walls.length)], side * 8.5, h / 2, z, true);
   for (const y of [5, 7.8]) {
@@ -245,7 +247,9 @@ function buildSegment(rng, i, zone = 0) {
   for (const y of [6.2, 6.5, 6.8]) add(seg, G.wire, 0x222222, 0, y, 0).rotation.z = Math.PI / 2;
   if (zone === 0) for (const [y, r] of [[5.9, 0.05], [6.05, -0.06]]) add(seg, G.wire, 0x222222, 0, y, 12).rotation.set(0, r, Math.PI / 2 + r); // tangled extra wires
   for (const [n, side, z] of [[0, -1, 7.5], [1, 1, -7.5]]) streetlight(seg, side, z, LAMPS[(i * 2 + n) % 3]);
-  return seg;
+  const merged = mergeStatic(seg);
+  merged.userData.heights = seg.userData.heights || [];
+  return merged;
 }
 
 // Municipal streetlight: grey pole on the kerb, arm over the road, sodium lamp, a light pool and a faint beam at night.
@@ -299,7 +303,7 @@ function buildArch() {
   }
   const tex = ZONES.map((z, i) => nameTexture(z.name, ARCH_COLORS[i]));
   return {
-    g,
+    g: mergeStatic(g),
     setZone(i) {
       board.material.map = tex[i];
       board.material.color.set(tex[i] ? 0xffffff : ARCH_COLORS[i]);
@@ -324,9 +328,10 @@ function buildTrain() {
   add(g, new THREE.SphereGeometry(0.22, 10, 8), 0, 0, 3.8, 8.55).material =
     new THREE.MeshStandardMaterial({ color: 0xfff3b0, emissive: 0xffe08a, emissiveIntensity: 1.5 });
   for (let i = 1; i < 4; i++) coach(-i * 17.6, false);
-  g.position.x = 9.5;
-  g.visible = false;
-  return g;
+  const train = mergeStatic(g);
+  train.position.x = 9.5;
+  train.visible = false;
+  return train;
 }
 
 export function createWorld(scene, seed = 1) {

@@ -14,7 +14,7 @@ test('builds segments into the scene', () => {
   for (const s of w.segments) assert.equal(s.parent, scene);
   assert.deepEqual(zs(w), [0, -30, -60, -90, -120, -150, -180, -210]);
   let meshes = 0; scene.traverse(o => { if (o.isMesh) meshes++; });
-  assert.ok(meshes > SEG_COUNT * 20, `meshes ${meshes}`);
+  assert.ok(meshes > SEG_COUNT * 10 && meshes < SEG_COUNT * 60, `meshes ${meshes} (merged per material)`);
 });
 
 test('recycles with no gaps while running, including huge jumps', () => {
@@ -30,7 +30,7 @@ test('recycles with no gaps while running, including huge jumps', () => {
 });
 
 test('same seed same city, buildings vary in height', () => {
-  const h = (seed) => { const s = new THREE.Scene(); createWorld(s, seed); const hs = []; s.traverse(o => { if (o.isMesh && o.geometry.type === 'BoxGeometry' && o.geometry.parameters.depth === 9.5) hs.push(o.geometry.parameters.height); }); return hs; };
+  const h = (seed) => createWorld(new THREE.Scene(), seed).segments.flatMap((s) => s.children[0].userData.heights);
   const a = h(5);
   assert.deepEqual(a, h(5));
   assert.equal(a.length, SEG_COUNT * 6);

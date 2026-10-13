@@ -1,4 +1,5 @@
 import * as THREE from '../vendor/three.module.js';
+import { mergeStatic } from './merge.js';
 
 const mats = new Map();
 const mat = (color, extra) => {
@@ -261,11 +262,11 @@ const BUILD = {
   },
 };
 
-// Built once per name, then cloned: clones share geometry, so spawning thousands never leaks GPU memory.
+// Built once per name (merged to one mesh per material), then cloned: clones share geometry, so spawning thousands never leaks GPU memory.
 const templates = new Map();
 export function createProp(name) {
   const build = BUILD[name];
   if (!build) throw new Error(`Unknown prop: ${name}`);
-  if (!templates.has(name)) { const g = new THREE.Group(); build(g); templates.set(name, g); }
+  if (!templates.has(name)) { const g = new THREE.Group(); build(g); templates.set(name, mergeStatic(g)); }
   return templates.get(name).clone();
 }
