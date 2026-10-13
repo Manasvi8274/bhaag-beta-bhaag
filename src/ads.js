@@ -78,9 +78,10 @@ export const WEB_AD_CONFIG = {
 
 export function createWebAds(config = WEB_AD_CONFIG, w = globalThis) {
   let loaded = null;
+  const available = !!w.document && !!(config.enabled || config.test);
 
   function preload() {
-    if (!w.document) return Promise.resolve(false);
+    if (!available) return Promise.resolve(false);
     loaded ??= new Promise((resolve) => {
       w.adsbygoogle = w.adsbygoogle || [];
       w.adBreak = w.adConfig = (o) => w.adsbygoogle.push(o);
@@ -115,5 +116,5 @@ export function createWebAds(config = WEB_AD_CONFIG, w = globalThis) {
     });
   }
 
-  return { available: !!w.document, preload, showRewarded };
+  return { available, preload, showRewarded };
 }

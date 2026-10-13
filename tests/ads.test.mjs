@@ -89,15 +89,23 @@ test('web: rewarded only when watched; script loaded once', async () => {
   assert.equal(await a.showRewarded(), true);
   assert.equal(await a.showRewarded(), true);
   assert.equal(w.scripts.length, 1);
-  assert.equal(await createWebAds({ client: 'x' }, fakePage('dismissed')).showRewarded(), false);
-  assert.equal(await createWebAds({ client: 'x' }, fakePage('noFill')).showRewarded(), false);
+  assert.equal(await createWebAds({ client: 'x', enabled: true }, fakePage('dismissed')).showRewarded(), false);
+  assert.equal(await createWebAds({ client: 'x', enabled: true }, fakePage('noFill')).showRewarded(), false);
 });
 
 test('web: ad blocker -> false, retries the script next time; no document -> unavailable', async () => {
   const w = fakePage('blocked');
-  const a = createWebAds({ client: 'x' }, w);
+  const a = createWebAds({ client: 'x', enabled: true }, w);
   assert.equal(await a.showRewarded(), false);
   assert.equal(await a.showRewarded(), false);
   assert.equal(w.scripts.length, 2);
-  assert.equal(createWebAds({ client: 'x' }, {}).available, false);
+  assert.equal(createWebAds({ client: 'x', enabled: true }, {}).available, false);
+});
+
+test('web: not enabled (site not approved yet) -> hidden, never loads the script', async () => {
+  const w = fakePage('viewed');
+  const a = createWebAds({ client: 'x', enabled: false, test: false }, w);
+  assert.equal(a.available, false);
+  assert.equal(await a.showRewarded(), false);
+  assert.equal(w.scripts.length, 0);
 });
