@@ -5,7 +5,7 @@ import { aabbOverlap, firstHit, groundAt } from './collision.js';
 import { createSpawner, spawnUntil } from './spawner.js';
 import { createChaser, stumble, catchNow, updateChaser, throwDue, angryThrowDue } from './chaser.js';
 import { createStickman } from './stickman.js';
-import { createProp, setPropsNight } from './props.js';
+import { createProp, setPropsNight, addHeadlights } from './props.js';
 import { createWorld, lampForLight, LAMP_HEAD_Y } from './world.js';
 import { createSky } from './sky.js';
 import { skyAt, menuTime } from './daynight.js';
@@ -26,6 +26,7 @@ const GROUND_DAY = new THREE.Color(0x8a7a66), GROUND_NIGHT = new THREE.Color(0x3
 const TAUNTS = ['Ruk ja!', 'Ruk ja nalayak!', 'Aaj nahi chhodunga!', 'Remote kahan hai?!', 'Ghar chal tu!', 'Bas ek baar haath aa!'];
 const NEAR_MISS_COINS = 5, NEAR_MISS_WINDOW = 0.6; // dodged out of a vehicle's lane this recently = a near miss
 const MILESTONE = 500;
+const FIREWORKS = [0xff3b3b, 0xffd60a, 0x3aff7a, 0x3a86ff, 0xff70ff, 0xffffff];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const HINTS = [[0.8, '👈 Swipe left / right 👉'], [4.5, '👆 Swipe up to jump'], [8, '👇 Swipe down to slide']];
 
@@ -237,7 +238,7 @@ export function startGame(canvas, uiRoot) {
 
   function spawnItems() {
     for (const item of spawnUntil(run.spawner, run.z)) {
-      const mesh = createProp(item.type === 'obstacle' ? item.name : item.type === 'coin' ? 'coin' : item.name);
+      const mesh = addHeadlights(createProp(item.type === 'obstacle' ? item.name : item.type === 'coin' ? 'coin' : item.name), item.name);
       mesh.position.set(item.x, item.type === 'coin' ? item.y - 0.3 : item.type === 'powerup' ? item.y - 0.4 : 0, item.z);
       scene.add(mesh);
       run.items.push({ item, mesh });
@@ -343,10 +344,23 @@ export function startGame(canvas, uiRoot) {
   function updateMovers(dt) {
     for (const { item, mesh } of run.items) {
       if (!item.vz || item.z < run.z - 28 || item.z > run.z + 6) continue;
-      if (!item.honked) { item.honked = true; audio.play('horn'); }
+      if (!item.honked) {
+        item.honked = true;
+        audio.play('horn');
+        if (!run.sawScooter) { run.sawScooter = true; ui.toast('🛵 Scooter uncle aa rahe hain! Hato!'); }
+      }
       item.z += item.vz * dt;
       mesh.position.z = item.z;
     }
+  }
+
+  // Mandir Marg at night: phuljhadi and anaar bursting over the rooftops.
+  function fireworks(dt, night) {
+    if (night < 0.8 || run.zone !== 2 || (run.fwT = (run.fwT || 0) - dt) > 0) return;
+    run.fwT = 1.2 + Math.random() * 2;
+    const x = (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 10); // low enough to be in a portrait phone's view
+    fx.burst(x, 13 + Math.random() * 6, run.z - 50 - Math.random() * 25, pick(FIREWORKS), 36, { speed: 8, up: 3, life: 1.4, gravity: -4, scale: 3 });
+    audio.play('firework');
   }
 
   function updatePlaying(dt) {
@@ -365,6 +379,7 @@ export function startGame(canvas, uiRoot) {
     updateChaser(run.chaser, dt);
     updateChappals(dt);
     updateMovers(dt);
+    fireworks(dt, skyAt(run.t).night);
     updatePowerups(run.pu, dt);
     run.stumbleT = Math.max(0, run.stumbleT - dt);
     run.invuln = Math.max(0, run.invuln - dt);
@@ -405,6 +420,7 @@ export function startGame(canvas, uiRoot) {
       const r = finishRun();
       state = 'over';
       ui.showGameOver({ score: run.score, coins: run.coins, best: progress.data.best, isNewBest: r.isNewBest,
+        where: `🏁 ${run.stats.distance} m · ${ZONES[run.zone].name}`,
         completed: r.completed, reviveCost: reviveCost(), wallet: progress.data.coins, adAvailable: ads.available && !run.adUsed });
     }
   }

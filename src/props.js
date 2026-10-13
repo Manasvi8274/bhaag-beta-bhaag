@@ -11,8 +11,31 @@ const mat = (color, extra) => {
   }
   return mats.get(key);
 };
+// Headlight beams for oncoming vehicles: invisible by day, they announce autos, buses and scooters at night.
+const BEAM_MAT = (() => {
+  const data = new Uint8Array(32 * 4);
+  for (let i = 0; i < 32; i++) { data.fill(255, i * 4, i * 4 + 3); data[i * 4 + 3] = Math.round(255 * (i / 31) ** 2); }
+  const map = new THREE.DataTexture(data, 1, 32);
+  map.needsUpdate = true;
+  return new THREE.MeshBasicMaterial({ color: 0xfff1c0, map, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending, side: THREE.DoubleSide });
+})();
+const BEAM_GEO = new THREE.CylinderGeometry(0.12, 1.1, 6, 12, 1, true);
+const LIGHTS = { auto: [[0, 1.12, 1.18]], bus: [[-0.7, 1.0, 4.02], [0.7, 1.0, 4.02]], scooter: [[0, 1.2, 0.7]] };
+export function addHeadlights(mesh, name) {
+  for (const [x, y, z] of LIGHTS[name] || []) {
+    const b = new THREE.Mesh(BEAM_GEO, BEAM_MAT);
+    b.rotation.x = -Math.PI / 2 + 0.08; // narrow end at the lamp, widening ahead, dipped a little
+    b.position.set(x, y - 0.24, z + 3);
+    b.renderOrder = 2;
+    mesh.add(b);
+  }
+  return mesh;
+}
+
 export function setPropsNight(night) {
   for (const m of mats.values()) if (m.userData.glow) m.emissiveIntensity = m.userData.glow * (1 + night * 2.5);
+  BEAM_MAT.opacity = night * 0.3;
+  BEAM_MAT.visible = night > 0.05; // not drawn at all by day
 }
 
 function add(g, geo, color, x = 0, y = 0, z = 0, extra) {

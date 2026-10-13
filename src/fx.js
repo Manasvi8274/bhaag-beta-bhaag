@@ -1,11 +1,11 @@
 import * as THREE from '../vendor/three.module.js';
 
 // Pooled particle bursts (coin sparkle, dust, chappal stars). Fixed pool = no allocations during play.
-export function createFx(scene, size = 90) {
+export function createFx(scene, size = 160) {
   const geo = new THREE.BoxGeometry(0.1, 0.1, 0.1);
   const pool = [];
   for (let i = 0; i < size; i++) {
-    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true }));
+    const m = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, fog: false })); // fireworks stay bright far away
     m.visible = false;
     m.frustumCulled = false;
     scene.add(m);

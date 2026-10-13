@@ -47,6 +47,7 @@ export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAu
     horn: () => { const t = ctx.currentTime; for (const d of [0, 0.18]) tone('square', 440, 430, 0.13, 0.12, t + d); }, // scooter: pom pom
     train: () => { const t = ctx.currentTime; tone('sawtooth', 311, 305, 1.3, 0.1, t); tone('sawtooth', 392, 385, 1.3, 0.08, t); },
     bell: () => { const t = ctx.currentTime; tone('sine', 1318, 1310, 1.6, 0.22, t); tone('sine', 2637, 2620, 0.7, 0.08, t); tone('triangle', 659, 655, 1.2, 0.12, t); },
+    firework: () => { const t = ctx.currentTime; noise(0.3, 0.12, 'lowpass', 900, 150, t); for (let i = 1; i < 5; i++) noise(0.04, 0.05, 'highpass', 3000, 3000, t + 0.25 + i * 0.07); },
     cricket: () => { const t = ctx.currentTime; for (let i = 0; i < 3; i++) tone('sine', 4300, 4200, 0.03, 0.04, t + i * 0.06); },
   };
 

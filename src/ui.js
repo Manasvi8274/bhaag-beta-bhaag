@@ -113,6 +113,7 @@ export function createUI(root, h) {
   const oScore = el('div', 'stat o', '', over);
   const oCoins = el('div', 'stat o', '', over);
   const oBest = el('div', 'stat o', '', over);
+  const oWhere = el('div', 'sub o', '', over);
   const badge = el('div', 'badge', 'NEW BEST!', over);
   const oMissions = el('div', 'col', null, over);
   const revive = btn(over, '', 'ok', () => h.onRevive());
@@ -164,7 +165,8 @@ export function createUI(root, h) {
       pSound.textContent = `${soundLabel(muted)} Sound ${muted ? 'Off' : 'On'}`;
       pVibe.textContent = `📳 Vibration ${vibrate ? 'On' : 'Off'}`;
     },
-    showGameOver({ score: s, coins: c, best, isNewBest, completed, reviveCost, wallet: w, adAvailable }) {
+    showGameOver({ score: s, coins: c, best, isNewBest, completed, reviveCost, wallet: w, adAvailable, where = '' }) {
+      oWhere.textContent = where;
       adBtn.classList.toggle('hidden', !adAvailable);
       adBtn.disabled = false;
       adBtn.textContent = '📺 Watch ad to escape';
