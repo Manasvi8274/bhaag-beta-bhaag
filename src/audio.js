@@ -54,16 +54,27 @@ export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAu
     cricket: () => { const t = ctx.currentTime; for (let i = 0; i < 3; i++) tone('sine', 4300, 4200, 0.03, 0.04, t + i * 0.06); },
   };
 
-  // Tumbi riff over the dhol: 32 eighth notes (Hz, 0 = rest). It sits out every other loop so it never nags.
-  const TUMBI = [880, 0, 880, 1047, 0, 880, 1319, 0, 1175, 0, 1047, 880, 0, 784, 880, 0,
-    880, 0, 1047, 1175, 0, 1319, 1175, 0, 1047, 0, 880, 784, 0, 659, 784, 0];
+  // A tune per area over the dhol, 32 eighth notes (Hz, 0 = rest); it sits out every other loop so it never nags.
+  // Market Gali: tumbi pluck. Railway Colony: a chugging train groove with whistle notes. Mandir Marg: temple bells
+  // on the beat and a soft bhajan line.
+  const TUNES = [
+    { wave: 'square', vol: 0.045, dur: 0.09, notes: [880, 0, 880, 1047, 0, 880, 1319, 0, 1175, 0, 1047, 880, 0, 784, 880, 0,
+      880, 0, 1047, 1175, 0, 1319, 1175, 0, 1047, 0, 880, 784, 0, 659, 784, 0] },
+    { wave: 'triangle', vol: 0.06, dur: 0.16, notes: [0, 0, 0, 0, 1568, 0, 1319, 0, 0, 0, 0, 0, 1568, 1568, 1319, 0,
+      0, 0, 0, 0, 1397, 0, 1175, 0, 0, 0, 0, 0, 1568, 0, 1760, 0] },
+    { wave: 'sine', vol: 0.07, dur: 0.22, notes: [523, 0, 587, 0, 659, 0, 587, 523, 0, 0, 440, 0, 523, 0, 0, 0,
+      659, 0, 784, 0, 659, 587, 523, 0, 587, 0, 523, 0, 440, 0, 0, 0] },
+  ];
+  let zone = 0;
   function beat(s, when) {
     const d = s % 8;
     if (d === 0 || d === 3 || d === 6) tone('sine', 95, 55, 0.18, 0.55, when);
     else if (d === 1) noise(0.03, 0.08, 'highpass', 5000, 5000, when);
     else tone('triangle', 420, 300, 0.06, 0.2, when);
-    const f = TUMBI[s % 32];
-    if (f && s < 32) tone('square', f, f * 0.98, 0.09, 0.045, when);
+    if (zone === 1) noise(0.05, d % 2 ? 0.03 : 0.06, 'highpass', 7000, 7000, when); // chug-a chug-a
+    if (zone === 2 && d === 0) tone('sine', 1318, 1310, 0.6, 0.06, when); // mandir bell on the one
+    const t = TUNES[zone], f = t.notes[s % 32];
+    if (f && s < 32) tone(t.wave, f, f * 0.98, t.dur, t.vol, when);
   }
 
   return {
@@ -105,6 +116,7 @@ export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAu
     // f: 0 = starting speed .. 1 = top speed; the dhol speeds up from 120 to ~150 BPM.
     setTempo(f) { stepDur = 0.25 - 0.05 * Math.max(0, Math.min(1, f)); },
     setNight(n) { night = n; },
+    setZone(z) { zone = z; },
     // Rain hiss: one looping noise source, created the first time it rains; level 0..1.
     setRain(level) {
       if (!ctx || (!rainGain && level <= 0)) return;

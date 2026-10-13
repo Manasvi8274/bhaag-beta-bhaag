@@ -203,6 +203,7 @@ export function startGame(canvas, uiRoot) {
     ui.setPowerups([]);
     ui.flash('Bhaag!');
     if (daily) ui.toast(`📅 Aaj ka Challenge: reach ${ch.goal} m!`);
+    audio.setZone(0);
     shout(`${progress.data.hero === 'beti' ? 'बेटी' : 'बेटा'}! रुक जा!`);
     audio.startMusic();
     ads.preload(); // so the "watch ad" revive is instant at game over
@@ -513,7 +514,7 @@ export function startGame(canvas, uiRoot) {
     run.dt = dt;
     run.t += dt;
     const zone = zoneAt(run.z);
-    if (zone !== run.zone) { run.zone = zone; run.stats.areas += 1; ui.flash(`📍 ${ZONES[zone].name}`); audio.play('bell'); }
+    if (zone !== run.zone) { run.zone = zone; run.stats.areas += 1; audio.setZone(zone); ui.flash(`📍 ${ZONES[zone].name}`); audio.play('bell'); }
     updateCycleChase();
     if (run.daily && !run.goalHit && -run.z >= run.goal) { run.goalHit = true; ui.flash('🎉 Challenge done!'); audio.play('powerup'); }
     if (-run.z >= (run.milestone + 1) * MILESTONE) { run.milestone += 1; ui.toast(`🏁 ${run.milestone * MILESTONE} m! Shabash!`); }
@@ -649,7 +650,7 @@ export function startGame(canvas, uiRoot) {
     const camTarget = caught
       ? new THREE.Vector3(p.x * 0.4 + 1.2, 2.0, run.z - 4.4) // front, road side: never inside buildings
       : new THREE.Vector3(p.x * 0.6, 3.2 + run.floorS + (p.y - run.floorS) * 0.3, run.z + 6.5);
-    camera.position.lerp(camTarget, Math.min(1, dt * (caught ? 2.5 : 8)));
+    camera.position.lerp(camTarget, Math.min(1, dt * (caught ? 2.5 : run.t < 1.4 ? 3 : 8))); // slow swoop at the start
     if (shake > 0) {
       camera.position.x += (Math.random() - 0.5) * shake;
       camera.position.y += (Math.random() - 0.5) * shake;

@@ -64,3 +64,15 @@ test('rain hiss: nothing until it rains, then one looping source', () => {
   a.setRain(0.5); const n = created; assert.ok(n >= 3);
   a.setRain(1); a.setRain(0); assert.equal(created, n, 'reused');
 });
+
+test('each area has its own music', async () => {
+  for (const z of [0, 1, 2]) {
+    const a = createAudio(FakeCtx);
+    a.unlock(); a.setZone(z);
+    created = 0;
+    a.startMusic();
+    await new Promise(r => setTimeout(r, 80));
+    a.stopMusic();
+    assert.ok(created > 0, `area ${z}`);
+  }
+});
