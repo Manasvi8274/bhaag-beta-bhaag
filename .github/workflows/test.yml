@@ -1,0 +1,14 @@
+# Tests on every branch and pull request (master's own deploy workflow runs them too before publishing).
+name: test
+on:
+  push:
+    branches-ignore: [master]
+  pull_request:
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm test
