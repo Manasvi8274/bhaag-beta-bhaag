@@ -151,3 +151,54 @@ export function createRain(scene, n = 260) {
     },
   };
 }
+
+// Crows on the electric wires (one wire crossing every 30 m, ~6.5 m up). They sit until Beta is close, then flap
+// off. A small pool hops ahead from wire to wire. Returns true from update() when one takes off (for a "kaa").
+const WIRE_EVERY = 30, WIRE_Y = 6.82;
+export function createCrows(scene, n = 5) {
+  const ink = new THREE.MeshStandardMaterial({ color: 0x151515, roughness: 0.6 });
+  const bodyGeo = new THREE.CapsuleGeometry(0.09, 0.18, 3, 8), headGeo = new THREE.SphereGeometry(0.08, 8, 6);
+  const beakGeo = new THREE.ConeGeometry(0.03, 0.1, 6), wingGeo = new THREE.BoxGeometry(0.28, 0.02, 0.14);
+  const rng = mulberry32(5);
+  const crows = Array.from({ length: n }, () => {
+    const g = new THREE.Group();
+    const body = new THREE.Mesh(bodyGeo, ink); body.rotation.x = Math.PI / 2 - 0.5; body.position.y = 0.1;
+    const head = new THREE.Mesh(headGeo, ink); head.position.set(0, 0.2, 0.1);
+    const beak = new THREE.Mesh(beakGeo, ink); beak.rotation.x = Math.PI / 2; beak.position.set(0, 0.19, 0.2);
+    const wings = [-1, 1].map((s) => { const w = new THREE.Group(); w.position.set(s * 0.06, 0.13, 0); const m = new THREE.Mesh(wingGeo, ink); m.position.x = s * 0.14; w.add(m); g.add(w); return w; });
+    g.add(body, head, beak);
+    g.scale.setScalar(1.9); // bigger than life so they read on a phone
+    g.visible = false;
+    scene.add(g);
+    return { g, wings, wire: null, fly: 0, vx: 0 };
+  });
+  let nextWire = null;
+  return {
+    reset() { nextWire = null; for (const c of crows) { c.g.visible = false; c.wire = null; } },
+    update(dt, playerZ, t) {
+      if (nextWire === null) nextWire = Math.floor((playerZ - 20) / WIRE_EVERY) * WIRE_EVERY;
+      let cawed = false;
+      for (const c of crows) {
+        if (c.wire === null || (c.fly > 0 && c.fly > 3) || c.wire > playerZ + 15) { // perch on the next wire ahead
+          c.wire = nextWire; nextWire -= WIRE_EVERY * (1 + Math.floor(rng() * 2));
+          c.g.position.set((rng() - 0.5) * 6, WIRE_Y, c.wire);
+          c.g.rotation.y = rng() < 0.5 ? 0 : Math.PI; c.fly = 0; c.vx = (rng() - 0.5) * 6;
+          c.g.visible = true;
+        }
+        if (c.fly === 0 && c.wire > playerZ - 14) { c.fly = 0.001; cawed = true; } // Beta is close: off it goes
+        if (c.fly > 0) {
+          c.fly += dt;
+          c.g.position.y += (3 + c.fly * 2) * dt;
+          c.g.position.x += c.vx * dt;
+          c.g.position.z -= 4 * dt;
+          const flap = Math.sin(t * 28) * 0.9;
+          c.wings[0].rotation.z = flap; c.wings[1].rotation.z = -flap;
+        } else {
+          c.wings[0].rotation.z = 0.15; c.wings[1].rotation.z = -0.15;
+          c.g.rotation.z = Math.sin(t * 2 + c.wire) * 0.05; // bobbing on the wire
+        }
+      }
+      return cawed;
+    },
+  };
+}

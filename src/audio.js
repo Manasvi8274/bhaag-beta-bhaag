@@ -50,6 +50,7 @@ export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAu
     firework: () => { const t = ctx.currentTime; noise(0.3, 0.12, 'lowpass', 900, 150, t); for (let i = 1; i < 5; i++) noise(0.04, 0.05, 'highpass', 3000, 3000, t + 0.25 + i * 0.07); },
     thunder: () => { const t = ctx.currentTime; noise(1.8, 0.5, 'lowpass', 300, 60, t + 0.3); noise(0.25, 0.25, 'lowpass', 1200, 200, t + 0.3); },
     tring: () => { const t = ctx.currentTime; for (const d of [0, 0.16]) { tone('sine', 2350, 2300, 0.12, 0.2, t + d); tone('sine', 3100, 3050, 0.1, 0.08, t + d); } },
+    caw: () => { const t = ctx.currentTime; for (const d of [0, 0.22]) { tone('sawtooth', 620, 480, 0.16, 0.05, t + d); noise(0.14, 0.05, 'bandpass', 1400, 1000, t + d); } },
     cricket: () => { const t = ctx.currentTime; for (let i = 0; i < 3; i++) tone('sine', 4300, 4200, 0.03, 0.04, t + i * 0.06); },
   };
 

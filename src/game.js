@@ -7,7 +7,7 @@ import { createChaser, stumble, catchNow, updateChaser, throwDue, angryThrowDue,
 import { createStickman, HEROES, CHASERS } from './stickman.js';
 import { createProp, setPropsNight, addHeadlights, PROP_NAMES, buildBicycle } from './props.js';
 import { createWorld, lampForLight, LAMP_HEAD_Y } from './world.js';
-import { createSky, createRain } from './sky.js';
+import { createSky, createRain, createCrows } from './sky.js';
 import { skyAt, menuTime, mix, rainAt, rainStartFor } from './daynight.js';
 import { ZONES, zoneAt } from './zones.js';
 import { createInput } from './input.js';
@@ -81,6 +81,7 @@ export function startGame(canvas, uiRoot) {
   const lampLights = Array.from({ length: LAMP_LIGHTS }, () => { const l = new THREE.PointLight(0xffa646, 0, 13, 1.6); scene.add(l); return l; });
   const sky = createSky(scene);
   const rainFx = createRain(scene);
+  const crows = createCrows(scene);
   const betaLight = new THREE.PointLight(0xcfd8ff, 0, 9, 1.2); // night: lights the road around Beta so his black body reads
   scene.add(betaLight);
 
@@ -177,6 +178,7 @@ export function startGame(canvas, uiRoot) {
     if (run) for (const it of run.items) scene.remove(it.mesh);
     fx.clear();
     world.reset();
+    crows.reset();
   }
 
   // daily: today's challenge street (seeded: the same obstacles, rain and all, for everyone today).
@@ -659,6 +661,7 @@ export function startGame(canvas, uiRoot) {
     camera.updateProjectionMatrix();
     speedLines.update(dt, camera, state === 'playing' ? Math.max(0, (run.speed - 20) / (SPEED_MAX - 20)) : 0, run.speed);
     if (world.update(run.z, dt)) audio.play('train');
+    if (crows.update(dt, run.z, run.t) && state === 'playing' && Math.random() < 0.5) audio.play('caw');
     const rain = rainAt(run.t, run.rainStart);
     applySky(run.t, run.z, run.t, rain, run.flashT / 0.2);
     rainFx.update(dt, camera, rain, state === 'playing' ? run.speed : 0);

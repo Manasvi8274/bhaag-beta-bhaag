@@ -34,7 +34,7 @@ test('nothing plays before unlock; context created once', () => {
 test('every sound builds nodes; unknown and muted build none', () => {
   const a = createAudio(FakeCtx);
   a.unlock();
-  for (const n of ['jump', 'slide', 'coin', 'stumble', 'smack', 'powerup', 'horn', 'train', 'bell', 'cricket', 'firework', 'thunder', 'tring']) {
+  for (const n of ['jump', 'slide', 'coin', 'stumble', 'smack', 'powerup', 'horn', 'train', 'bell', 'cricket', 'firework', 'thunder', 'tring', 'caw']) {
     created = 0; a.play(n); assert.ok(created >= 2, `${n} created ${created}`);
   }
   created = 0; a.play('trumpet'); assert.equal(created, 0);
