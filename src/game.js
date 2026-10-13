@@ -5,8 +5,10 @@ import { aabbOverlap, firstHit, groundAt } from './collision.js';
 import { createSpawner, spawnUntil } from './spawner.js';
 import { createChaser, stumble, catchNow, updateChaser, throwDue } from './chaser.js';
 import { createStickman } from './stickman.js';
-import { createProp } from './props.js';
-import { createWorld } from './world.js';
+import { createProp, setPropsNight } from './props.js';
+import { createWorld, lampForLight, LAMP_HEAD_Y } from './world.js';
+import { createSky } from './sky.js';
+import { skyAt, menuTime } from './daynight.js';
 import { createInput } from './input.js';
 import { createUI } from './ui.js';
 import { createAudio } from './audio.js';
@@ -17,8 +19,9 @@ import { createPowerups, activate, updatePowerups, isActive, consume, listActive
 
 const CAUGHT_SCENE_TIME = 2.2;
 const THROW_WINDUP = 0.55, CHAPPAL_REL_SPEED = 6; // warning time, and how much faster than Beta it flies
-const SKY = [new THREE.Color(0x9bd4ff), new THREE.Color(0xffb37a), new THREE.Color(0x8a78c0)]; // day, sunset, dusk
-const CYCLE = 3000; // metres per day/sunset/dusk loop
+const LAMP_LIGHTS = 3; // real lights hopping between streetlights near Beta; the rest are emissive + glow decals
+const HEMI_DAY = new THREE.Color(0xffffff), HEMI_NIGHT = new THREE.Color(0x7d8fd8);
+const GROUND_DAY = new THREE.Color(0x8a7a66), GROUND_NIGHT = new THREE.Color(0x3a3440);
 const HINTS = [[0.8, '👈 Swipe left / right 👉'], [4.5, '👆 Swipe up to jump'], [8, '👇 Swipe down to slide']];
 
 const ease = (cur, target, rate, dt) => cur + (target - cur) * Math.min(1, dt * rate);
@@ -33,8 +36,7 @@ export function startGame(canvas, uiRoot) {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
 
   const scene = new THREE.Scene();
-  scene.background = SKY[0].clone();
-  scene.fog = new THREE.Fog(SKY[0].getHex(), 45, 150);
+  scene.fog = new THREE.Fog(0xbfe3ff, 45, 150);
   const camera = new THREE.PerspectiveCamera(62, 1, 0.1, 250);
   const hemi = new THREE.HemisphereLight(0xffffff, 0x8a7a66, 1.1);
   const sun = new THREE.DirectionalLight(0xfff1d6, 1.7);
@@ -42,6 +44,11 @@ export function startGame(canvas, uiRoot) {
   sun.shadow.mapSize.set(1024, 1024);
   Object.assign(sun.shadow.camera, { left: -12, right: 12, top: 12, bottom: -12, near: 1, far: 50 });
   scene.add(hemi, sun, sun.target);
+  // Created up front (intensity 0 by day) so the light count never changes: no shader recompiles mid-run.
+  const lampLights = Array.from({ length: LAMP_LIGHTS }, () => { const l = new THREE.PointLight(0xffa646, 0, 13, 1.6); scene.add(l); return l; });
+  const sky = createSky(scene);
+  const betaLight = new THREE.PointLight(0xcfd8ff, 0, 9, 1.2); // night: lights the road around Beta so his black body reads
+  scene.add(betaLight);
 
   const beta = createStickman('beta');
   const papa = createStickman('papa');
@@ -363,7 +370,29 @@ export function startGame(canvas, uiRoot) {
     }
   }
 
-  const skyTmp = new THREE.Color();
+  // Time of day: sky, fog, sun/moon light, streetlights, windows, vehicle lights.
+  function applySky(t, playerZ, clockT) {
+    const s = skyAt(t);
+    scene.fog.color.setHex(s.horizon);
+    sun.color.setHex(s.sunColor);
+    sun.intensity = s.sun;
+    hemi.intensity = s.hemi;
+    hemi.color.lerpColors(HEMI_DAY, HEMI_NIGHT, s.night);
+    hemi.groundColor.lerpColors(GROUND_DAY, GROUND_NIGHT, s.night);
+    world.setNight(s.night, clockT);
+    setPropsNight(s.night);
+    const lit = world.lampLevel();
+    lampLights.forEach((l, j) => {
+      const lamp = lampForLight(j, LAMP_LIGHTS, playerZ);
+      l.position.set(lamp.x * 0.35, LAMP_HEAD_Y - 1.5, lamp.z); // pulled toward the road so walls stay dark
+      l.intensity = lit * 22;
+      l.visible = lit > 0;
+    });
+    betaLight.intensity = s.night * 9;
+    betaLight.visible = s.night > 0;
+    sky.update(camera, s, clockT);
+  }
+
   function placeActors(dt) {
     const p = run.p;
     beta.group.position.set(p.x, p.y, run.z);
@@ -373,6 +402,7 @@ export function startGame(canvas, uiRoot) {
     bubble.visible = state === 'playing' && (isActive(run.pu, 'shield') || (run.invuln > 0 && Math.floor(run.t * 10) % 2 === 0));
     sun.position.set(p.x + 6, 14, run.z + 4);
     sun.target.position.set(p.x, 0, run.z - 4);
+    betaLight.position.set(p.x, p.y + 3, run.z + 2.5);
     const caught = state === 'caught' || state === 'over';
     run.floorS = ease(run.floorS, run.ground, 5, dt); // camera rises with Beta onto a bus roof, ignores jumps
     const camTarget = caught
@@ -387,13 +417,8 @@ export function startGame(canvas, uiRoot) {
     camera.lookAt(p.x * (caught ? 1 : 0.4), caught ? 1.1 + p.y : 1.2 + run.floorS, run.z - (caught ? -0.3 : 6));
     camera.fov = baseFov + ((run.speed - SPEED_START) / (SPEED_MAX - SPEED_START)) * 8; // speed feel
     camera.updateProjectionMatrix();
-    // Day -> sunset -> dusk -> day as you run.
-    const c = ((-run.z % CYCLE) / CYCLE) * 3, i = Math.floor(c) % 3;
-    skyTmp.lerpColors(SKY[i], SKY[(i + 1) % 3], c - Math.floor(c));
-    scene.background.copy(skyTmp);
-    scene.fog.color.copy(skyTmp);
-    hemi.intensity = 1.1 - (i === 2 || (i === 1 && c % 1 > 0.5) ? 0.25 : 0);
     world.update(run.z);
+    applySky(run.t, run.z, run.t);
   }
 
   function menuScene(t) {
@@ -408,8 +433,10 @@ export function startGame(canvas, uiRoot) {
     camera.updateProjectionMatrix();
     camera.position.set(Math.sin(t * 0.2) * 0.5, 1.35, camera.aspect > 1 ? -3.6 : -4.6);
     camera.lookAt(0, camera.aspect > 1 ? 1.55 : 1.3, 0);
-    scene.background.copy(SKY[0]);
-    scene.fog.color.copy(SKY[0]);
+    sun.position.set(6, 14, 4);
+    sun.target.position.set(0, 0, -4);
+    betaLight.position.set(0, 3, -2.5);
+    applySky(menuTime(new Date().getHours()), 0, t);
   }
 
   function resize() {

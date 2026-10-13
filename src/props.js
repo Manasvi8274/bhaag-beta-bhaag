@@ -3,9 +3,16 @@ import * as THREE from '../vendor/three.module.js';
 const mats = new Map();
 const mat = (color, extra) => {
   const key = color + (extra ? JSON.stringify(extra) : '');
-  if (!mats.has(key)) mats.set(key, new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...extra }));
+  if (!mats.has(key)) {
+    const m = new THREE.MeshStandardMaterial({ color, roughness: 0.7, ...extra });
+    m.userData.glow = extra?.emissiveIntensity; // head/tail lights, bulbs: brighter at night
+    mats.set(key, m);
+  }
   return mats.get(key);
 };
+export function setPropsNight(night) {
+  for (const m of mats.values()) if (m.userData.glow) m.emissiveIntensity = m.userData.glow * (1 + night * 2.5);
+}
 
 function add(g, geo, color, x = 0, y = 0, z = 0, extra) {
   const m = new THREE.Mesh(geo, mat(color, extra));
