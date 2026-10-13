@@ -30,7 +30,7 @@ export const UPGRADE_COST = [250, 600, 1200, 2500, 5000];
 export const DAILY_REWARDS = [50, 75, 100, 150, 200, 300, 500];
 const KEY = 'bbb-save-v1';
 const DEFAULTS = { coins: 0, best: 0, skin: 'classic', owned: ['classic'], muted: false, vibrate: true,
-  tutorialDone: false, level: 0, missions: null, lastDaily: null, streak: 0, challengeDone: null, hero: 'beta', chaser: 'papa', chars: ['beta', 'papa'] };
+  tutorialDone: false, level: 0, missions: null, lastDaily: null, streak: 0, challengeDone: null, badges: [], bestDistance: 0, hero: 'beta', chaser: 'papa', chars: ['beta', 'papa'] };
 
 function makeMission(level, taken) {
   const tier = Math.floor(level / 3);
@@ -41,6 +41,22 @@ function makeMission(level, taken) {
     return { stat: p.stat, goal, text: p.text(goal), reward: 50 + 25 * tier, flashed: false };
   }
 }
+
+// Badges: earned once, paid once. run = this run's stats, life = lifetime totals (after adding this run).
+export const ACHIEVEMENTS = [
+  { id: 'first', icon: '👟', text: 'Pehla Kadam: finish your first run', reward: 50, ok: (r, l) => l.runs >= 1 },
+  { id: 'night', icon: '🌙', text: 'Raat ka Raja: keep running till night falls', reward: 150, ok: (r) => r.night >= 1 },
+  { id: 'railway', icon: '🛤️', text: 'Railway Express: reach the Railway Colony', reward: 100, ok: (r) => r.areas >= 2 },
+  { id: 'mandir', icon: '🛕', text: 'Mandir Darshan: reach Mandir Marg', reward: 200, ok: (r) => r.areas >= 3 },
+  { id: 'rain', icon: '🌧️', text: 'Bheeg Gaye: run through a monsoon spell', reward: 100, ok: (r) => r.rain >= 1 },
+  { id: 'km', icon: '🏁', text: 'Kilometre King: 1000 m in one run', reward: 200, ok: (r) => r.distance >= 1000 },
+  { id: 'km3', icon: '🚀', text: 'Papa se Tez: 3000 m in one run', reward: 500, ok: (r) => r.distance >= 3000 },
+  { id: 'near', icon: '😅', text: 'Bal Bal Bache Pro: 5 near misses in one run', reward: 200, ok: (r) => r.nearMisses >= 5 },
+  { id: 'smash', icon: '🚲', text: 'Cycle Toofan: smash 8 things in one run', reward: 200, ok: (r) => r.smashes >= 8 },
+  { id: 'marathon', icon: '🏃', text: 'Marathon: 10 km in total', reward: 300, ok: (r, l) => l.distance >= 10000 },
+  { id: 'gullak', icon: '🐷', text: 'Gullak Bhar Gaya: 2000 coins collected in total', reward: 300, ok: (r, l) => l.coins >= 2000 },
+];
+const LIFE = ['runs', 'distance', 'coins', 'nearMisses', 'smashes'];
 
 // Aaj ka Challenge: one seeded street per date (same obstacles for everyone that day) and a distance goal.
 export const CHALLENGE_REWARD = 300;
@@ -59,6 +75,8 @@ export function createProgress(storage) {
   if (!Array.isArray(d.chars)) d.chars = [...DEFAULTS.chars];
   for (const kind of ['hero', 'chaser']) if (!CHARACTERS[kind][d[kind]] || !d.chars.includes(d[kind])) d[kind] = DEFAULTS[kind];
   d.upgrades = { ...(d.upgrades || {}) };
+  d.life = Object.fromEntries(LIFE.map((k) => [k, d.life?.[k] || 0]));
+  if (!Array.isArray(d.badges)) d.badges = [];
   if (!Array.isArray(d.missions) || d.missions.length !== 3) {
     d.missions = [];
     for (let i = 0; i < 3; i++) d.missions.push(makeMission(d.level + i, d.missions.map((m) => m.stat)));
@@ -118,6 +136,18 @@ export function createProgress(storage) {
       }
       save();
       return { isNewBest, completed };
+    },
+    // Adds a run to the lifetime records and pays any badges it earned. Pass only what is new since the last call
+    // (a revived run is recorded again with the rest): delta = stats growth, newRun = first record of this run,
+    // stats = the run so far (for per-run badges). Returns the badges earned now.
+    recordRun(delta, newRun, stats) {
+      if (newRun) d.life.runs += 1;
+      for (const k of LIFE) if (k !== 'runs') d.life[k] += delta[k] || 0;
+      d.bestDistance = Math.max(d.bestDistance, stats.distance || 0);
+      const earned = ACHIEVEMENTS.filter((a) => !d.badges.includes(a.id) && a.ok(stats, d.life));
+      for (const a of earned) { d.badges.push(a.id); d.coins += a.reward; }
+      save();
+      return earned;
     },
     // Pays the day's challenge once, if the run reached the goal. Returns the coins paid (0 if not).
     completeChallenge(today, distance) {

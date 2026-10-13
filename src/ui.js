@@ -226,13 +226,29 @@ export function createUI(root, h) {
         }
       });
     },
-    showMissions(missions, mult) {
-      openPanel('Missions', (p) => {
+    showMissions(missions, mult, data = null, badges = []) {
+      openPanel(data ? 'Missions & Badges' : 'Missions', (p) => {
         el('div', null, `Score multiplier: x${mult}  (every 3 missions = +1)`, p).style.fontSize = '16px';
         for (const m of missions) {
           const r = el('div', 'item', null, p);
           el('div', 'grow', `🎯 ${m.text}`, r);
           el('div', null, `+🪙${m.reward}`, r);
+        }
+        if (!data) return;
+        el('h3', null, `Badges ${data.badges.length}/${badges.length}`, p);
+        for (const a of badges) {
+          const r = el('div', 'item', null, p), got = data.badges.includes(a.id);
+          el('div', 'pu', got ? a.icon : '🔒', r);
+          el('div', 'grow', a.text, r).style.opacity = got ? 1 : 0.6;
+          el('div', null, got ? '✔' : `🪙${a.reward}`, r);
+        }
+        el('h3', null, 'Records', p);
+        const L = data.life;
+        for (const [k, v] of [['Best score', Math.floor(data.best)], ['Longest run', `${data.bestDistance} m`], ['Runs', L.runs],
+          ['Total distance', `${(L.distance / 1000).toFixed(1)} km`], ['Coins collected', L.coins], ['Near misses', L.nearMisses], ['Cycle smashes', L.smashes]]) {
+          const r = el('div', 'item', null, p);
+          el('div', 'grow', k, r);
+          el('div', null, String(v), r);
         }
       });
     },

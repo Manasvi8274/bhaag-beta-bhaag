@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createProgress, SKINS, DAILY_REWARDS, UPGRADE_COST, CHARACTERS, dailyChallenge, CHALLENGE_REWARD } from '../src/progress.js';
+import { createProgress, SKINS, DAILY_REWARDS, UPGRADE_COST, CHARACTERS, dailyChallenge, CHALLENGE_REWARD, ACHIEVEMENTS } from '../src/progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive } from '../src/powerups.js';
 
 const mem = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v) }; };
@@ -130,4 +130,22 @@ test('daily challenge: same street all day, new one tomorrow, paid once on reach
   assert.equal(p.data.coins, CHALLENGE_REWARD);
   assert.equal(p.completeChallenge('2026-10-14', 99999), 0, 'once a day');
   assert.equal(p.completeChallenge('2026-10-15', 99999), CHALLENGE_REWARD);
+});
+
+test('records and badges: lifetime totals add up across revives, each badge pays once', () => {
+  const s = mem();
+  const p = createProgress(s);
+  const run = { distance: 600, coins: 40, nearMisses: 2, smashes: 0, areas: 1, night: 0, rain: 0 };
+  let got = p.recordRun(run, true, run);
+  assert.deepEqual(got.map((a) => a.id), ['first']);
+  assert.equal(p.data.coins, 50);
+  const more = { distance: 500, coins: 10, nearMisses: 3 }; // revived and ran on
+  const now = { distance: 1100, coins: 50, nearMisses: 5, smashes: 0, areas: 2, night: 1, rain: 0 };
+  got = p.recordRun(more, false, now);
+  assert.deepEqual(got.map((a) => a.id).sort(), ['km', 'near', 'night', 'railway']);
+  assert.deepEqual(p.data.life, { runs: 1, distance: 1100, coins: 50, nearMisses: 5, smashes: 0 });
+  assert.equal(p.data.bestDistance, 1100);
+  assert.equal(p.recordRun(now, true, now).length, 0, 'never twice');
+  assert.equal(createProgress(s).data.life.runs, 2, 'saved');
+  assert.equal(new Set(ACHIEVEMENTS.map((a) => a.id)).size, ACHIEVEMENTS.length);
 });

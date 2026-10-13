@@ -24,6 +24,7 @@ sabzi thelas and buses, duck under shaadi banners, and leap over potholes. Trip 
 • Double Coins
 • Bhaiya Ki Cycle – hop on a bicycle, ride faster and smash through everything in your way
 🎯 **Missions** – finish missions to raise your score multiplier up to x10
+🏅 **Badges & records** – 11 badges to earn (Raat ka Raja, Mandir Darshan, Papa se Tez…) and your lifetime records
 👧 **Beta or Beti** – choose who runs, and who chases: Papa with the chappal, Mummy with the belan, or Dadi with her lathi
 🛒 **Beta Ki Dukaan** – spend coins on characters, caps and school bags
 📅 **Aaj ka Challenge** – a new street every day, the same for everyone: reach the goal for bonus coins
@@ -52,6 +53,7 @@ v1.2
 • New power-up: Bhaiya Ki Cycle - ride faster and smash through everything
 • Aaj ka Challenge: a daily street, the same for everyone, with a coin reward
 • Share your run as a score card
+• 11 badges with coin rewards, and a records page
 • Monsoon rain with thunder, fireworks at night, kites by day
 • Angry Papa throws from afar after 1 km; "Bal bal bache!" near-miss coins; new missions
 • Smoother on budget phones

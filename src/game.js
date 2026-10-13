@@ -16,7 +16,7 @@ import { createAudio } from './audio.js';
 import { createFx, createSpeedLines } from './fx.js';
 import { createAds, createWebAds } from './ads.js';
 import { drawCard, shareRun } from './share.js';
-import { createProgress, SKINS, CHARACTERS, dailyChallenge } from './progress.js';
+import { createProgress, SKINS, CHARACTERS, dailyChallenge, ACHIEVEMENTS } from './progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL, POWERUP_TIME } from './powerups.js';
 
 const CAUGHT_SCENE_TIME = 2.2;
@@ -118,6 +118,7 @@ export function startGame(canvas, uiRoot) {
   const ui = createUI(uiRoot, {
     onStart: () => begin(false), onRestart: () => begin(run?.daily), onChallenge: () => begin(true), onPause: pauseGame, onResume: resume, onRevive: () => revive(false), onWatchAd: watchAd,
     onHome() { if (state === 'paused') finishRun(); goMenu(); },
+    onMissions: () => ui.showMissions(progress.data.missions, progress.multiplier(), progress.data, ACHIEVEMENTS),
     onSound() { progress.setSetting('muted', !progress.data.muted); audio.setMuted(progress.data.muted); ui.setSettings(progress.data); },
     onVibrate() { progress.setSetting('vibrate', !progress.data.vibrate); ui.setSettings(progress.data); vibrate(40); },
     onShop: () => ui.showShop(SKINS, progress.data, upgradeList(), CHARACTERS),
@@ -138,7 +139,7 @@ export function startGame(canvas, uiRoot) {
       ui.setWallet(progress.data.coins);
     },
     onShare,
-    onMissions: () => ui.showMissions(progress.data.missions, progress.multiplier()),
+
     onClaimDaily() { progress.claimDaily(today()); ui.setWallet(progress.data.coins); audio.play('powerup'); },
   });
   ui.setSettings(progress.data);
@@ -164,7 +165,8 @@ export function startGame(canvas, uiRoot) {
       items: [], hitSet: new Set(), coins: 0, committed: 0, score: 0, stumbleT: 0, invuln: 0,
       caughtT: 0, smackT: 0, papaZ: 3, papaX: 0, zone: 0, ground: 0, floorS: 0, pendingThrow: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
       dodgeT: -9, dodgeFromX: 0, milestone: 0, rainStart: rainStartFor(daily ? (seed % 1000) / 1000 : Math.random()), thunderT: 3, flashT: 0, rained: false,
-      stats: { score: 0, coins: 0, distance: 0, jumps: 0, slides: 0, powerups: 0, dodges: 0, nearMisses: 0, areas: 1 },
+      stats: { score: 0, coins: 0, distance: 0, jumps: 0, slides: 0, powerups: 0, dodges: 0, nearMisses: 0, areas: 1, smashes: 0, night: 0, rain: 0 },
+      recorded: null, // stats already added to the lifetime records (a revived run records only what is new)
     };
     if (progress.data.tutorialDone) run.hint = HINTS.length;
     state = 'playing';
@@ -212,6 +214,9 @@ export function startGame(canvas, uiRoot) {
     const r = progress.finishRun(run.stats);
     const paid = run.daily ? progress.completeChallenge(today(), run.stats.distance) : 0;
     if (paid) r.completed.push({ text: 'Aaj ka Challenge', reward: paid });
+    const delta = Object.fromEntries(Object.entries(run.stats).map(([k, v]) => [k, v - (run.recorded?.[k] || 0)]));
+    for (const a of progress.recordRun(delta, !run.recorded, run.stats)) r.completed.push({ text: `🏅 ${a.text.split(':')[0]}`, reward: a.reward });
+    run.recorded = { ...run.stats };
     return r;
   }
 
@@ -348,6 +353,7 @@ export function startGame(canvas, uiRoot) {
       if (item.type !== 'obstacle' || run.hitSet.has(item) || !aabbOverlap(box, item)) continue;
       run.hitSet.add(item);
       mesh.visible = false;
+      run.stats.smashes += 1;
       run.coins += SMASH_COINS;
       run.stats.coins += SMASH_COINS;
       fx.burst(item.x, 0.8, item.z, 0xffd60a, 14, { speed: 5, up: 5, life: 0.6 });
@@ -468,7 +474,9 @@ export function startGame(canvas, uiRoot) {
     updateChaser(run.chaser, dt);
     updateChappals(dt);
     updateMovers(dt);
-    fireworks(dt, skyAt(run.t).night);
+    const night = skyAt(run.t).night;
+    if (night > 0.9) run.stats.night = 1;
+    fireworks(dt, night);
     updatePowerups(run.pu, dt);
     run.stumbleT = Math.max(0, run.stumbleT - dt);
     run.invuln = Math.max(0, run.invuln - dt);
@@ -554,6 +562,7 @@ export function startGame(canvas, uiRoot) {
   function updateWeather(dt) {
     const rain = rainAt(run.t, run.rainStart);
     if (rain > 0 && !run.rained) { run.rained = true; ui.toast('🌧️ Baarish aa gayi! Sambhal ke!'); }
+    if (rain > 0.5) run.stats.rain = 1;
     run.flashT = Math.max(0, run.flashT - dt);
     if (rain > 0.6 && (run.thunderT -= dt) <= 0) {
       run.thunderT = 5 + Math.random() * 7;
