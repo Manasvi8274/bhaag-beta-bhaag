@@ -29,13 +29,25 @@ sabzi thelas and buses, duck under shaadi banners, and leap over potholes. Trip 
 🩴 **Chappal attack** – when Papa catches up he throws his chappal: dodge it!
 ⬆️ **Upgrades** – make every power-up last longer
 ❤️ **Bachao!** – spend coins to escape Papa and keep running
-🌅 Day turns to sunset as you run further
+🌙 **Day & night** – the sun sets as you run, streetlights flicker on, windows and shop signs glow, stars come out
+🛤️ **Three mohallas** – Market Gali, Railway Colony (with a passing express train) and Mandir Marg (temple bells, diyas, fireworks)
+🛵 **Desi traffic** – scooter uncle riding the wrong way, sleeping street dogs, cement pipes
+🌧️ **Monsoon spells** – rain, thunder and a shiny wet road
+😡 **Angry Papa** – after 1 km he throws his chappal from afar; dodge close for "Bal bal bache!" bonus coins
 📴 **Plays fully offline**, small download, smooth on budget phones
 🔒 No forced ads ever — watch one only if you want a second chance. No accounts, no sign-up.
 
 Every Indian kid knows this chase. How far can YOU run before Papa catches you?
 
 ## Release notes (paste into "What's new")
+v1.2
+• Day turns to night: streetlights switch on, windows and shop signs glow, stars and moon
+• Three areas: Market Gali, Railway Colony (watch the train!) and Mandir Marg
+• New obstacles: scooter uncle, sleeping dogs, cement pipes
+• Monsoon rain with thunder, fireworks at night, kites by day
+• Angry Papa throws from afar after 1 km; "Bal bal bache!" near-miss coins; new missions
+• Smoother on budget phones
+
 v1.1
 • Run up ramps onto bus roofs and grab the roof coins!
 • Papa now THROWS his chappal when he's right behind you - dodge it!

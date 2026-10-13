@@ -222,6 +222,16 @@ export function createUI(root, h) {
         btn(p, 'Claim', 'ok', () => { h.onClaimDaily(); modal.classList.add('hidden'); });
       });
     },
+    showNews(items, onDone) {
+      openPanel(`Naya kya hai? v${VERSION}`, (p) => {
+        for (const [icon, text] of items) {
+          const r = el('div', 'item', null, p);
+          el('div', 'pu', icon, r);
+          el('div', 'grow', text, r);
+        }
+        btn(p, 'Chalo, bhaago!', 'ok', () => { modal.classList.add('hidden'); onDone(); }).style.marginTop = '12px';
+      });
+    },
     flash(text) { flashEl.textContent = text; replay(flashEl, 'go'); },
     hint(text) { hintEl.textContent = text; replay(hintEl, 'go'); },
     toast(text) { toastEl.textContent = text; replay(toastEl, 'go'); },

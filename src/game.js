@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.js';
-import { SPEED_START, SPEED_MAX, SPEED_RAMP, LANES } from './config.js';
+import { SPEED_START, SPEED_MAX, SPEED_RAMP, LANES, VERSION } from './config.js';
 import { createPlayer, applyAction, updatePlayer, getHitbox } from './player.js';
 import { aabbOverlap, firstHit, groundAt } from './collision.js';
 import { createSpawner, spawnUntil } from './spawner.js';
@@ -28,6 +28,13 @@ const NEAR_MISS_COINS = 5, NEAR_MISS_WINDOW = 0.6; // dodged out of a vehicle's 
 const MILESTONE = 500;
 const FIREWORKS = [0xff3b3b, 0xffd60a, 0x3aff7a, 0x3a86ff, 0xff70ff, 0xffffff];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
+const NEWS = [
+  ['🌙', 'Day turns to night as you run: streetlights, lit windows, neon signs, stars'],
+  ['🛤️', 'Three mohallas: Market Gali, Railway Colony (watch the train!), Mandir Marg'],
+  ['🛵', 'New on the road: scooter uncle, sleeping dogs, cement pipes'],
+  ['🌧️', 'Monsoon spells with thunder, and fireworks at night'],
+  ['😡', 'After 1 km Papa throws his chappal from afar. Dodge close for "Bal bal bache!" coins'],
+];
 const HINTS = [[0.8, '👈 Swipe left / right 👉'], [4.5, '👆 Swipe up to jump'], [8, '👇 Swipe down to slide']];
 
 const ease = (cur, target, rate, dt) => cur + (target - cur) * Math.min(1, dt * rate);
@@ -587,7 +594,11 @@ export function startGame(canvas, uiRoot) {
   const clock = new THREE.Clock();
   goMenu();
   const daily = progress.dailyStatus(today());
-  if (daily.available) ui.showDaily(daily.streak, daily.reward);
+  const showDaily = () => { if (daily.available) ui.showDaily(daily.streak, daily.reward); };
+  let newsSeen = true;
+  try { newsSeen = storage?.getItem('bbb-news') === VERSION; storage?.setItem('bbb-news', VERSION); } catch { /* blocked */ }
+  if (!newsSeen && progress.data.tutorialDone) ui.showNews(NEWS, showDaily); // returning players only
+  else showDaily();
   renderer.setAnimationLoop(() => {
     const raw = clock.getDelta();
     if (state === 'playing' && raw < 0.5) watchPerf(raw); // ignore tab-switch gaps

@@ -1,5 +1,5 @@
 // All tunable game constants. Units: metres, seconds.
-export const VERSION = '1.1';
+export const VERSION = '1.2';
 export const LANES = [-2, 0, 2];          // x of each lane centre
 export const LANE_SWITCH_TIME = 0.15;     // seconds to move one lane
 export const GRAVITY = -40;
