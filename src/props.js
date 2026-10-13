@@ -280,7 +280,7 @@ const BUILD = {
   },
   coin(g) {
     const m = add(g, new THREE.CylinderGeometry(0.3, 0.3, 0.08, 24), 0xffc300, 0, 0.3, 0,
-      { metalness: 0.6, roughness: 0.3, emissive: 0x553300 });
+      { metalness: 0.6, roughness: 0.3, emissive: 0x553300, emissiveIntensity: 1 }); // glows brighter at night
     m.rotation.x = Math.PI / 2;
   },
 };

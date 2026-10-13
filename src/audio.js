@@ -52,10 +52,16 @@ export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAu
     cricket: () => { const t = ctx.currentTime; for (let i = 0; i < 3; i++) tone('sine', 4300, 4200, 0.03, 0.04, t + i * 0.06); },
   };
 
+  // Tumbi riff over the dhol: 32 eighth notes (Hz, 0 = rest). It sits out every other loop so it never nags.
+  const TUMBI = [880, 0, 880, 1047, 0, 880, 1319, 0, 1175, 0, 1047, 880, 0, 784, 880, 0,
+    880, 0, 1047, 1175, 0, 1319, 1175, 0, 1047, 0, 880, 784, 0, 659, 784, 0];
   function beat(s, when) {
-    if (s === 0 || s === 3 || s === 6) tone('sine', 95, 55, 0.18, 0.55, when);
-    else if (s === 1) noise(0.03, 0.08, 'highpass', 5000, 5000, when);
+    const d = s % 8;
+    if (d === 0 || d === 3 || d === 6) tone('sine', 95, 55, 0.18, 0.55, when);
+    else if (d === 1) noise(0.03, 0.08, 'highpass', 5000, 5000, when);
     else tone('triangle', 420, 300, 0.06, 0.2, when);
+    const f = TUMBI[s % 32];
+    if (f && s < 32) tone('square', f, f * 0.98, 0.09, 0.045, when);
   }
 
   return {
@@ -86,7 +92,7 @@ export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAu
           // 120 BPM -> 8th note = 0.25 s (faster at speed); schedule everything within the next 0.15 s
           while (nextNote < ctx.currentTime + 0.15) {
             if (!muted) beat(step, nextNote);
-            step = (step + 1) % 8;
+            step = (step + 1) % 64;
             nextNote += stepDur;
           }
           if (!muted && night > 0.5 && Math.random() < 0.03) SOUNDS.cricket(); // jhingur at night
