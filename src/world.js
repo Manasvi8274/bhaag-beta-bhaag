@@ -222,7 +222,7 @@ function across(seg, z, y, n, makeMesh) {
   }
 }
 
-function buildSegment(rng, i, zone = 0) {
+function buildSegment(rng, i, zone = 0, diwali = false) {
   const seg = new THREE.Group(), st = STYLE[zone];
   add(seg, G.road, 0x3b3b3b, 0, 0, 0).rotation.x = -Math.PI / 2;
   for (let z = -SEG_LEN / 2 + 3; z < SEG_LEN / 2; z += 6) for (const x of [-1, 1]) add(seg, G.dash, 0xffffff, x, 0.01, z);
@@ -238,6 +238,10 @@ function buildSegment(rng, i, zone = 0) {
   }
   if (zone === 0 && rng() < 0.6) chaiTapri(seg, rng() < 0.5 ? -1 : 1, rng() < 0.5 ? -3.5 : 3.5);
   if (zone === 1) for (const z of [-3, 12]) tree(seg, -4.7, z, rng);
+  if (diwali && zone !== 2) { // Diwali week: every street gets lights
+    across(seg, -4, 5.1, 17, (k) => new THREE.Mesh(G.bulbBall, BULB_MATS[k % BULB_MATS.length]));
+    across(seg, 11, 5.3, 17, (k) => new THREE.Mesh(G.bulbBall, BULB_MATS[(k + 2) % BULB_MATS.length]));
+  }
   if (zone === 2) {
     flowerStall(seg, -templeSide, rng() < 0.5 ? -3.5 : 3.5);
     across(seg, -11, 5.4, 15, (k) => new THREE.Mesh(G.pennant, FLAG_MATS[k % FLAG_MATS.length]));
@@ -338,10 +342,10 @@ function buildTrain() {
   return train;
 }
 
-export function createWorld(scene, seed = 1) {
+export function createWorld(scene, seed = 1, { diwali = false } = {}) {
   const rng = mulberry32(seed);
   // Every slot has a ready-built segment per area; recycling a slot into a new area just swaps which one it shows.
-  const variants = ZONES.map((_, zone) => Array.from({ length: SEG_COUNT }, (__, i) => buildSegment(rng, i, zone)));
+  const variants = ZONES.map((_, zone) => Array.from({ length: SEG_COUNT }, (__, i) => buildSegment(rng, i, zone, diwali)));
   const place = (slot, i) => {
     const zone = zoneAt(slot.position.z);
     if (slot.userData.zone === zone) return;

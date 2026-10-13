@@ -17,6 +17,7 @@ import { createFx, createSpeedLines } from './fx.js';
 import { createAds, createWebAds } from './ads.js';
 import { drawCard, shareRun } from './share.js';
 import { createVoice } from './voice.js';
+import { festivalOn } from './festival.js';
 import { createProgress, SKINS, CHARACTERS, dailyChallenge, ACHIEVEMENTS } from './progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL, POWERUP_TIME } from './powerups.js';
 
@@ -101,7 +102,8 @@ export function startGame(canvas, uiRoot) {
   chaserBike.visible = false;
   for (const m of [...Object.values(heroes), ...Object.values(chasers)]) scene.add(m.group);
 
-  const world = createWorld(scene, 1);
+  const festival = festivalOn(today(), new URLSearchParams(location.search).get('festival') || '');
+  const world = createWorld(scene, 1, { diwali: festival === 'diwali' });
   const fx = createFx(scene);
   const speedLines = createSpeedLines(scene);
   const progress = createProgress(storage);
@@ -121,7 +123,7 @@ export function startGame(canvas, uiRoot) {
     beta.group.add(bubble, bike);
     papa.group.add(chaserBike);
     applySkin();
-    ui.setCharacters(CHARACTERS.hero[progress.data.hero].name, chaserInfo().line);
+    ui.setCharacters(CHARACTERS.hero[progress.data.hero].name, festival === 'diwali' ? '🪔 Happy Diwali! 🪔' : chaserInfo().line);
   }
 
   let state = 'menu', run = null, shake = 0, baseFov = 62;
@@ -500,9 +502,9 @@ export function startGame(canvas, uiRoot) {
     }
   }
 
-  // Mandir Marg at night: phuljhadi and anaar bursting over the rooftops.
+  // Mandir Marg at night (every street in Diwali week): phuljhadi and anaar bursting over the rooftops.
   function fireworks(dt, night) {
-    if (night < 0.8 || run.zone !== 2 || (run.fwT = (run.fwT || 0) - dt) > 0) return;
+    if (night < 0.8 || (run.zone !== 2 && !festival) || (run.fwT = (run.fwT || 0) - dt) > 0) return;
     run.fwT = 1.2 + Math.random() * 2;
     const x = (Math.random() < 0.5 ? -1 : 1) * (4 + Math.random() * 10); // low enough to be in a portrait phone's view
     fx.burst(x, 13 + Math.random() * 6, run.z - 50 - Math.random() * 25, pick(FIREWORKS), 36, { speed: 8, up: 3, life: 1.4, gravity: -4, scale: 3 });
