@@ -285,6 +285,8 @@ const BUILD = {
   },
 };
 
+export const PROP_NAMES = Object.keys(BUILD);
+
 // Built once per name (merged to one mesh per material), then cloned: clones share geometry, so spawning thousands never leaks GPU memory.
 const templates = new Map();
 export function createProp(name) {

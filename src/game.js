@@ -5,7 +5,7 @@ import { aabbOverlap, firstHit, groundAt } from './collision.js';
 import { createSpawner, spawnUntil } from './spawner.js';
 import { createChaser, stumble, catchNow, updateChaser, throwDue, angryThrowDue } from './chaser.js';
 import { createStickman } from './stickman.js';
-import { createProp, setPropsNight, addHeadlights } from './props.js';
+import { createProp, setPropsNight, addHeadlights, PROP_NAMES } from './props.js';
 import { createWorld, lampForLight, LAMP_HEAD_Y } from './world.js';
 import { createSky, createRain } from './sky.js';
 import { skyAt, menuTime, mix, rainAt, rainStartFor } from './daynight.js';
@@ -590,6 +590,15 @@ export function startGame(canvas, uiRoot) {
     }
     resize();
   }
+
+  // Compile every shader up front (all areas, obstacles, rain, particles: hidden ones too), not the first time one
+  // shows up mid-run, which stutters on phones.
+  const warm = new THREE.Group();
+  for (const v of world.variants) warm.add(v.clone());
+  for (const name of PROP_NAMES) warm.add(addHeadlights(createProp(name), name));
+  scene.add(warm);
+  renderer.compile(scene, camera);
+  scene.remove(warm);
 
   const clock = new THREE.Clock();
   goMenu();

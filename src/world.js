@@ -364,6 +364,7 @@ export function createWorld(scene, seed = 1) {
   return {
     segments,
     train,
+    variants: variants.flat(), // for shader warm-up
     // night 0..1, t = seconds (for the switch-on flicker and twinkling bulbs).
     setNight(night, t) {
       LAMPS.forEach((l, g) => {
