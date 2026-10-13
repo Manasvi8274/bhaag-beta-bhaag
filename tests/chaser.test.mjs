@@ -1,13 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createChaser, stumble, catchNow, updateChaser, isVisible, throwDue, THROW_AT } from '../src/chaser.js';
+import { createChaser, stumble, catchNow, updateChaser, isVisible, throwDue, THROW_AT, angryThrowDue, angryGap, ANGRY_FROM } from '../src/chaser.js';
 import { STUMBLE_WINDOW, CHASER_FAR, CHASER_NEAR } from '../src/config.js';
 
 const run = (c, secs, dt = 0.1) => { for (let i = 0; i < Math.round(secs / dt); i++) updateChaser(c, dt); };
 
 test('initial', () => {
   const c = createChaser();
-  assert.deepEqual(c, { distance: CHASER_FAR, time: 0, lastStumble: -Infinity, caught: false, thrown: 0 });
+  assert.deepEqual(c, { distance: CHASER_FAR, time: 0, lastStumble: -Infinity, caught: false, thrown: 0, nextAngry: null });
   assert.equal(isVisible(c), false);
 });
 
@@ -57,4 +57,18 @@ test('Papa throws the chappal at set times after a stumble, once each, never wit
   at.forEach((t, i) => assert.ok(Math.abs(t - 10 - THROW_AT[i]) < 0.15, `throw ${i} at ${t}`));
   stumble(c); updateChaser(c, 1.1); // still inside the stumble window
   assert.equal(throwDue(c), false, 'second stumble = caught, no more throws');
+});
+
+test('angry Papa: no long throws early on, then regular ones that speed up with distance', () => {
+  const c = createChaser();
+  const count = (secs, dist) => { let n = 0; for (let i = 0; i < secs * 10; i++) { updateChaser(c, 0.1); if (angryThrowDue(c, dist)) n++; } return n; };
+  assert.equal(count(60, ANGRY_FROM - 1), 0);
+  const slow = count(60, ANGRY_FROM), fast = count(60, 5000);
+  assert.ok(slow >= 3 && slow <= 5, `slow ${slow}`);
+  assert.ok(fast >= 9 && fast <= 11, `fast ${fast}`);
+  assert.equal(angryGap(100000), 6);
+  stumble(c);
+  assert.equal(count(STUMBLE_WINDOW - 0.5, 5000), 0, 'not while he is right behind after a stumble');
+  catchNow(c);
+  assert.equal(count(30, 5000), 0);
 });

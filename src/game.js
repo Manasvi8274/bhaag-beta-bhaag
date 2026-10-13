@@ -3,7 +3,7 @@ import { SPEED_START, SPEED_MAX, SPEED_RAMP, LANES } from './config.js';
 import { createPlayer, applyAction, updatePlayer, getHitbox } from './player.js';
 import { aabbOverlap, firstHit, groundAt } from './collision.js';
 import { createSpawner, spawnUntil } from './spawner.js';
-import { createChaser, stumble, catchNow, updateChaser, throwDue } from './chaser.js';
+import { createChaser, stumble, catchNow, updateChaser, throwDue, angryThrowDue } from './chaser.js';
 import { createStickman } from './stickman.js';
 import { createProp, setPropsNight } from './props.js';
 import { createWorld, lampForLight, LAMP_HEAD_Y } from './world.js';
@@ -13,7 +13,7 @@ import { ZONES, zoneAt } from './zones.js';
 import { createInput } from './input.js';
 import { createUI } from './ui.js';
 import { createAudio } from './audio.js';
-import { createFx } from './fx.js';
+import { createFx, createSpeedLines } from './fx.js';
 import { createAds, createWebAds } from './ads.js';
 import { createProgress, SKINS } from './progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL, POWERUP_TIME } from './powerups.js';
@@ -23,6 +23,10 @@ const THROW_WINDUP = 0.55, CHAPPAL_REL_SPEED = 6; // warning time, and how much 
 const LAMP_LIGHTS = 2; // real lights hopping between streetlights near Beta; the rest are emissive + glow decals
 const HEMI_DAY = new THREE.Color(0xffffff), HEMI_NIGHT = new THREE.Color(0x7d8fd8);
 const GROUND_DAY = new THREE.Color(0x8a7a66), GROUND_NIGHT = new THREE.Color(0x3a3440);
+const TAUNTS = ['Ruk ja!', 'Ruk ja nalayak!', 'Aaj nahi chhodunga!', 'Remote kahan hai?!', 'Ghar chal tu!', 'Bas ek baar haath aa!'];
+const NEAR_MISS_COINS = 5, NEAR_MISS_WINDOW = 0.6; // dodged out of a vehicle's lane this recently = a near miss
+const MILESTONE = 500;
+const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const HINTS = [[0.8, '👈 Swipe left / right 👉'], [4.5, '👆 Swipe up to jump'], [8, '👇 Swipe down to slide']];
 
 const ease = (cur, target, rate, dt) => cur + (target - cur) * Math.min(1, dt * rate);
@@ -61,6 +65,7 @@ export function startGame(canvas, uiRoot) {
 
   const world = createWorld(scene, 1);
   const fx = createFx(scene);
+  const speedLines = createSpeedLines(scene);
   const progress = createProgress(storage);
   const audio = createAudio();
   let ads = createAds();
@@ -112,7 +117,8 @@ export function startGame(canvas, uiRoot) {
       spawner: createSpawner((Math.random() * 1e9) | 0), chaser: createChaser(), pu: createPowerups(),
       items: [], hitSet: new Set(), coins: 0, committed: 0, score: 0, stumbleT: 0, invuln: 0,
       caughtT: 0, smackT: 0, papaZ: 3, papaX: 0, zone: 0, ground: 0, floorS: 0, pendingThrow: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
-      stats: { score: 0, coins: 0, distance: 0, jumps: 0, slides: 0, powerups: 0, dodges: 0 },
+      dodgeT: -9, dodgeFromX: 0, milestone: 0,
+      stats: { score: 0, coins: 0, distance: 0, jumps: 0, slides: 0, powerups: 0, dodges: 0, nearMisses: 0, areas: 1 },
     };
     if (progress.data.tutorialDone) run.hint = HINTS.length;
     state = 'playing';
@@ -217,7 +223,7 @@ export function startGame(canvas, uiRoot) {
     const p = run.p, wasGrounded = p.grounded;
     if (action === 'left' || action === 'right') run.prevLane = p.lane;
     if (!applyAction(p, action)) return;
-    if (action === 'left' || action === 'right') run.stats.dodges += 1;
+    if (action === 'left' || action === 'right') { run.stats.dodges += 1; run.dodgeT = run.t; run.dodgeFromX = LANES[run.prevLane]; }
     else if (action === 'jump') {
       run.stats.jumps += 1;
       if (isActive(run.pu, 'jump')) p.vy *= 1.45; // doodh power: clears even a bus
@@ -291,20 +297,21 @@ export function startGame(canvas, uiRoot) {
     audio.play('stumble');
     fx.burst(p.x, 0.3, run.z, 0xb5a99a, 10, { speed: 3, up: 2 });
     if (stumble(run.chaser) === 'caught') { enterCaught(); return; }
-    ui.flash('Ruk ja!');
+    ui.flash(pick(TAUNTS));
   }
 
   // Papa's chappal: a warning, then it flies down the lane Beta is in. Dodge, jump or slide; a hit is a stumble
   // (and so right after one, Pakda!).
   function updateChappals(dt) {
-    if (throwDue(run.chaser)) {
+    if (throwDue(run.chaser) || angryThrowDue(run.chaser, -run.z)) {
       run.pendingThrow = THROW_WINDUP;
       run.throwX = LANES[run.p.lane]; // aimed when the warning shows, so reacting to it saves you
       ui.flash('⚠️ Chappal aayi!');
       audio.play('whoosh');
     }
     if (run.pendingThrow > 0 && (run.pendingThrow -= dt) <= 0) {
-      const item = { type: 'obstacle', name: 'chappal', kind: 'low', x: run.throwX, y: 0.9, z: run.z + run.papaZ - 0.5, w: 0.5, h: 0.35, d: 0.5 };
+      // from Papa's hand, or (an angry throw from afar) from just behind the camera; never past the clean-up line at +10
+      const item = { type: 'obstacle', name: 'chappal', kind: 'low', x: run.throwX, y: 0.9, z: run.z + Math.min(run.papaZ, 8) - 0.5, w: 0.5, h: 0.35, d: 0.5 };
       const mesh = createProp('chappal');
       scene.add(mesh);
       run.items.push({ item, mesh });
@@ -314,6 +321,21 @@ export function startGame(canvas, uiRoot) {
       item.z -= (run.speed + CHAPPAL_REL_SPEED) * dt;
       mesh.position.set(item.x, item.y, item.z);
       mesh.rotation.x -= dt * 18;
+    }
+  }
+
+  // A vehicle Beta just swerved out of the way of, as it goes past: "Bal bal bache!" and a few coins.
+  function nearMisses() {
+    for (const { item } of run.items) {
+      if (item.kind !== 'block' || item.passed || item.z - item.d / 2 < run.z + 0.3) continue;
+      item.passed = true;
+      if (run.hitSet.has(item) || item.x !== run.dodgeFromX || run.t - run.dodgeT > NEAR_MISS_WINDOW) continue;
+      run.coins += NEAR_MISS_COINS;
+      run.stats.coins += NEAR_MISS_COINS;
+      run.stats.nearMisses += 1;
+      ui.toast(`Bal bal bache! +${NEAR_MISS_COINS} 🪙`);
+      audio.play('coin');
+      fx.burst(run.p.x, 1.2, run.z, 0xffd60a, 10, { speed: 3, up: 3, life: 0.5 });
     }
   }
 
@@ -332,7 +354,8 @@ export function startGame(canvas, uiRoot) {
     run.dt = dt;
     run.t += dt;
     const zone = zoneAt(run.z);
-    if (zone !== run.zone) { run.zone = zone; ui.flash(`📍 ${ZONES[zone].name}`); audio.play('bell'); }
+    if (zone !== run.zone) { run.zone = zone; run.stats.areas += 1; ui.flash(`📍 ${ZONES[zone].name}`); audio.play('bell'); }
+    if (-run.z >= (run.milestone + 1) * MILESTONE) { run.milestone += 1; ui.toast(`🏁 ${run.milestone * MILESTONE} m! Shabash!`); }
     audio.setTempo((run.speed - SPEED_START) / (SPEED_MAX - SPEED_START));
     if (run.hint < HINTS.length && run.t >= HINTS[run.hint][0]) ui.hint(HINTS[run.hint++][1]);
     run.speed = Math.min(SPEED_MAX, run.speed + SPEED_RAMP * dt);
@@ -354,6 +377,7 @@ export function startGame(canvas, uiRoot) {
     collect(box);
     hitObstacles(box);
     if (state !== 'playing') return;
+    nearMisses();
 
     run.stats.distance = Math.floor(-run.z);
     run.score = run.stats.score = Math.floor(-run.z * run.mult) + run.coins * 10;
@@ -431,11 +455,13 @@ export function startGame(canvas, uiRoot) {
     camera.lookAt(p.x * (caught ? 1 : 0.4), caught ? 1.1 + p.y : 1.2 + run.floorS, run.z - (caught ? -0.3 : 6));
     camera.fov = baseFov + ((run.speed - SPEED_START) / (SPEED_MAX - SPEED_START)) * 8; // speed feel
     camera.updateProjectionMatrix();
+    speedLines.update(dt, camera, state === 'playing' ? Math.max(0, (run.speed - 20) / (SPEED_MAX - 20)) : 0, run.speed);
     if (world.update(run.z, dt)) audio.play('train');
     applySky(run.t, run.z, run.t);
   }
 
   function menuScene(t) {
+    speedLines.update(0, camera, 0, 0);
     beta.setMode('idle');
     papa.setMode('spank');
     bubble.visible = false;

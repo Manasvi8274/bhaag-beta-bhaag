@@ -16,6 +16,8 @@ const POOL = [
   { stat: 'slides', text: (n) => `Slide ${n} times in one run`, base: 6, step: 4 },
   { stat: 'powerups', text: (n) => `Grab ${n} power-ups in one run`, base: 1, step: 1 },
   { stat: 'dodges', text: (n) => `Change lane ${n} times in one run`, base: 20, step: 10 },
+  { stat: 'nearMisses', text: (n) => `Bal bal bache! Dodge ${n} vehicles at the last moment`, base: 2, step: 2 },
+  { stat: 'areas', text: (n) => `Run through ${n} mohallas in one run`, base: 2, step: 1 },
 ];
 // Power-up upgrades: each level makes that power-up last 25% longer.
 export const UPGRADE_COST = [250, 600, 1200, 2500, 5000];

@@ -44,3 +44,32 @@ export function createFx(scene, size = 90) {
     clear() { for (const p of pool) { p.life = 0; p.m.visible = false; } },
   };
 }
+
+// Speed lines streaking past the camera near top speed. One instanced mesh = one draw call.
+export function createSpeedLines(scene, n = 28) {
+  const mesh = new THREE.InstancedMesh(new THREE.BoxGeometry(0.025, 0.025, 2.6),
+    new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false, fog: false }), n);
+  mesh.frustumCulled = false;
+  mesh.visible = false;
+  scene.add(mesh);
+  const rel = Array.from({ length: n }, (_, i) => {
+    const side = i % 2 ? 1 : -1;
+    return new THREE.Vector3(side * (1.6 + Math.random() * 3), 0.4 + Math.random() * 4.5, -Math.random() * 24);
+  });
+  const m = new THREE.Matrix4();
+  return {
+    // amount 0..1
+    update(dt, camera, amount, speed) {
+      mesh.visible = amount > 0.01;
+      if (!mesh.visible) return;
+      mesh.material.opacity = amount * 0.45;
+      rel.forEach((r, i) => {
+        r.z += speed * 1.6 * dt;
+        if (r.z > 2) r.z -= 26;
+        m.makeTranslation(camera.position.x + r.x, camera.position.y - 3.2 + r.y, camera.position.z - 6 + r.z);
+        mesh.setMatrixAt(i, m);
+      });
+      mesh.instanceMatrix.needsUpdate = true;
+    },
+  };
+}
