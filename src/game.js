@@ -362,17 +362,6 @@ export function startGame(canvas, uiRoot) {
       mesh.position.set(item.x, item.type === 'coin' ? item.y - 0.3 : item.type === 'powerup' ? item.y - 0.4 : 0, item.z);
       scene.add(mesh);
       run.items.push({ item, mesh });
-      audio.play('whoosh');
-    }
-    let from = null, x = 0; // the threat: a throw winding up (from behind the camera) or a chappal not yet past Beta
-    if (run.pendingThrow > 0) { from = run.z + 7; x = run.throwX; }
-    for (const { item } of run.items) if (item.name === 'chappal' && item.z > run.z - 0.5) { from = item.z; x = item.x; }
-    warnLane.visible = from !== null;
-    if (from !== null) {
-      const to = run.z - 3; // a little past Beta, so it reads as "this lane"
-      warnLane.position.set(x, run.ground + 0.03, (from + to) / 2);
-      warnLane.scale.y = from - to;
-      warnLane.material.opacity = 0.3 + 0.2 * Math.sin(run.t * 22);
     }
   }
 
@@ -470,6 +459,17 @@ export function startGame(canvas, uiRoot) {
       const mesh = createProp(chaserInfo().throws);
       scene.add(mesh);
       run.items.push({ item, mesh });
+      audio.play('whoosh');
+    }
+    let from = null, x = 0; // the threat: a throw winding up (from behind the camera) or a chappal not yet past Beta
+    if (run.pendingThrow > 0) { from = run.z + 7; x = run.throwX; }
+    for (const { item } of run.items) if (item.name === 'chappal' && item.z > run.z - 0.5) { from = item.z; x = item.x; }
+    warnLane.visible = from !== null;
+    if (from !== null) {
+      const to = run.z - 3; // a little past Beta, so it reads as "this lane"
+      warnLane.position.set(x, run.ground + 0.03, (from + to) / 2);
+      warnLane.scale.y = from - to;
+      warnLane.material.opacity = 0.3 + 0.2 * Math.sin(run.t * 22);
     }
     for (const { item, mesh } of run.items) {
       if (item.name !== 'chappal') continue;
