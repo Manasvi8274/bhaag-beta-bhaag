@@ -1,6 +1,6 @@
 // Offline support: precache the app shell, then stale-while-revalidate everything (incl. Google Fonts).
 // Bump VERSION on every release so players get the new files.
-const VERSION = 'bbb-v10';
+const VERSION = 'bbb-v11';
 const SHELL = [
   './', './index.html', './manifest.webmanifest', './privacy.html', './icons/icon-192.png', './icons/icon-512.png',
   './vendor/three.module.js',

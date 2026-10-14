@@ -51,6 +51,7 @@ function buildBody(R) {
 }
 
 export const HEROES = ['beta', 'beti'];
+export const SPANK_PERIOD = 0.42; // one chappal swing: slow wind-up overhead, then a fast whack down
 export const CHASERS = ['papa', 'mummy', 'dadi'];
 const capsuleMesh = (r, len, material, parent, x, y, z) => mesh(capsule(r, len), material, parent, x, y, z);
 
@@ -137,7 +138,13 @@ function targets(mode, s, t, phase, type) {
       pair('shoulder', 1.25); pair('elbow', 0.35); o['head.x'] = 0.2; // arms forward to the handlebar
       break;
     }
-    case 'spank': pair('elbow', 0.5); o['shoulderR.x'] = 2.6 + 0.9 * Math.sin(t * 16); o['elbowR.x'] = 0.8; o['shoulderL.x'] = 0.5; o['pelvis.x'] = -0.15; break;
+    case 'spank': { // left hand holds the kid, right arm winds up and whacks (the hit lands as u wraps to 0)
+      const u = (t % SPANK_PERIOD) / SPANK_PERIOD, up = u < 0.7 ? u / 0.7 : 1 - (u - 0.7) / 0.3;
+      o['shoulderR.x'] = 1.3 + 2.1 * up; o['elbowR.x'] = 0.2 + 1.2 * up;
+      o['shoulderL.x'] = 1.2; o['elbowL.x'] = 0.3; o['pelvis.x'] = -0.1 - 0.25 * (1 - up); o['head.x'] = 0.3;
+      pair('hip', 0.25); o['hipR.x'] = -0.3; pair('knee', -0.3);
+      break;
+    }
   }
   if (CHASERS.includes(type) && (mode === 'run' || mode === 'ride')) { // weapon raised overhead, shaking it at the kid
     o['shoulderR.x'] = 2.9 + 0.35 * Math.sin(t * 11);

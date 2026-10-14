@@ -42,7 +42,7 @@ export function createAudio(Ctx = globalThis.AudioContext || globalThis.webkitAu
     coin: (p = 1) => { const t = ctx.currentTime; tone('square', 988 * p, 988 * p, 0.07, 0.18, t); tone('square', 1319 * p, 1319 * p, 0.12, 0.18, t + 0.07); },
     stumble: () => { tone('sine', 140, 50, 0.25, 0.7); noise(0.1, 0.3, 'lowpass', 2000, 400); },
     whoosh: () => noise(0.35, 0.5, 'bandpass', 600, 2400),
-    smack: () => noise(0.08, 0.9, 'highpass', 1500, 1500),
+    smack: () => { noise(0.07, 0.9, 'highpass', 1800, 1500); tone('sine', 170, 60, 0.12, 0.6); },
     powerup: () => { const t = ctx.currentTime; [523, 659, 784, 1047].forEach((f, i) => tone('triangle', f, f, 0.12, 0.25, t + i * 0.08)); },
     horn: () => { const t = ctx.currentTime; for (const d of [0, 0.18]) tone('square', 440, 430, 0.13, 0.12, t + d); }, // scooter: pom pom
     train: () => { const t = ctx.currentTime; tone('sawtooth', 311, 305, 1.3, 0.1, t); tone('sawtooth', 392, 385, 1.3, 0.08, t); },

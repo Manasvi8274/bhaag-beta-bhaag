@@ -4,7 +4,7 @@ import { createPlayer, applyAction, updatePlayer, getHitbox } from './player.js'
 import { aabbOverlap, firstHit, groundAt } from './collision.js';
 import { createSpawner, spawnUntil } from './spawner.js';
 import { createChaser, stumble, chappalHit, catchNow, updateChaser, throwDue, angryThrowDue, startChase, chaseActive } from './chaser.js';
-import { createStickman, HEROES, CHASERS } from './stickman.js';
+import { createStickman, HEROES, CHASERS, SPANK_PERIOD } from './stickman.js';
 import { createProp, setPropsNight, addHeadlights, PROP_NAMES, buildBicycle } from './props.js';
 import { createWorld, lampForLight, LAMP_HEAD_Y } from './world.js';
 import { createSky, createRain, createCrows } from './sky.js';
@@ -22,8 +22,9 @@ import { createRecorder, record, ghostAt, ghostDistance } from './ghost.js';
 import { createProgress, SKINS, CHARACTERS, dailyChallenge, ACHIEVEMENTS } from './progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL, POWERUP_TIME } from './powerups.js';
 
-const CAUGHT_SCENE_TIME = 2.2;
-const THROW_WINDUP = 0.55, CHAPPAL_REL_SPEED = 6; // warning time, and how much faster than Beta it flies
+const CAUGHT_SCENE_TIME = 2.9;
+const HIT_WORDS = ['CHATAK!', 'DHAP!', 'THAPAK!', 'CHAPAAK!'];
+const THROW_WINDUP = 0.7, CHAPPAL_REL_SPEED = 6; // warning time, and how much faster than Beta it flies
 const LAMP_LIGHTS = 2; // real lights hopping between streetlights near Beta; the rest are emissive + glow decals
 const HEMI_DAY = new THREE.Color(0xffffff), HEMI_NIGHT = new THREE.Color(0x7d8fd8);
 const GROUND_DAY = new THREE.Color(0x8a7a66), GROUND_NIGHT = new THREE.Color(0x3a3440);
@@ -99,6 +100,12 @@ export function startGame(canvas, uiRoot) {
     new THREE.MeshStandardMaterial({ color: 0xff70a6, emissive: 0xff70a6, emissiveIntensity: 0.4, transparent: true, opacity: 0.22, depthWrite: false }));
   bubble.position.y = 0.95;
   bubble.visible = false;
+  // Danger lane: a pulsing red stripe on the road in the lane a chappal is about to fly down.
+  const warnLane = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 1),
+    new THREE.MeshBasicMaterial({ color: 0xff2a2a, transparent: true, opacity: 0.4, depthWrite: false, fog: false }));
+  warnLane.rotation.x = -Math.PI / 2;
+  warnLane.visible = false;
+  scene.add(warnLane);
   const bike = new THREE.Group();
   const bikeWheels = buildBicycle(bike);
   bike.visible = false;
@@ -198,7 +205,7 @@ export function startGame(canvas, uiRoot) {
       rec: daily ? createRecorder() : null, ghost: daily ? progress.ghostFor(today()) : null, ghostBeat: false,
       spawner: createSpawner(seed), chaser: createChaser(), pu: createPowerups(),
       items: [], hitSet: new Set(), coins: 0, committed: 0, score: 0, stumbleT: 0, invuln: 0,
-      caughtT: 0, smackT: 0, papaZ: 3, papaX: 0, zone: 0, ground: 0, floorS: 0, pendingThrow: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
+      caughtT: 0, hits: 0, jolt: 0, throwHinted: false, papaZ: 3, papaX: 0, zone: 0, ground: 0, floorS: 0, pendingThrow: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
       dodgeT: -9, dodgeFromX: 0, milestone: 0, nextChase: CHASE_EVERY, chasing: false, rainStart: rainStartFor(daily ? (seed % 1000) / 1000 : Math.random()), thunderT: 3, flashT: 0, rained: false,
       stats: { score: 0, coins: 0, distance: 0, jumps: 0, slides: 0, powerups: 0, dodges: 0, nearMisses: 0, areas: 1, smashes: 0, night: 0, rain: 0 },
       recorded: null, // stats already added to the lifetime records (a revived run records only what is new)
@@ -320,6 +327,7 @@ export function startGame(canvas, uiRoot) {
     catchNow(run.chaser);
     state = 'caught';
     run.caughtT = 0;
+    run.hits = 0;
     beta.setMode('caught');
     papa.setMode('spank');
     ui.flash('Pakda!');
@@ -354,6 +362,17 @@ export function startGame(canvas, uiRoot) {
       mesh.position.set(item.x, item.type === 'coin' ? item.y - 0.3 : item.type === 'powerup' ? item.y - 0.4 : 0, item.z);
       scene.add(mesh);
       run.items.push({ item, mesh });
+      audio.play('whoosh');
+    }
+    let from = null, x = 0; // the threat: a throw winding up (from behind the camera) or a chappal not yet past Beta
+    if (run.pendingThrow > 0) { from = run.z + 7; x = run.throwX; }
+    for (const { item } of run.items) if (item.name === 'chappal' && item.z > run.z - 0.5) { from = item.z; x = item.x; }
+    warnLane.visible = from !== null;
+    if (from !== null) {
+      const to = run.z - 3; // a little past Beta, so it reads as "this lane"
+      warnLane.position.set(x, run.ground + 0.03, (from + to) / 2);
+      warnLane.scale.y = from - to;
+      warnLane.material.opacity = 0.3 + 0.2 * Math.sin(run.t * 22);
     }
   }
 
@@ -442,6 +461,7 @@ export function startGame(canvas, uiRoot) {
       run.pendingThrow = THROW_WINDUP;
       run.throwX = LANES[run.p.lane]; // aimed when the warning shows, so reacting to it saves you
       ui.flash(chaserInfo().warn);
+      if (!run.throwHinted) { run.throwHinted = true; ui.toast('Red lane = incoming! Change lane, jump or slide'); }
       audio.play('whoosh');
     }
     if (run.pendingThrow > 0 && (run.pendingThrow -= dt) <= 0) {
@@ -577,11 +597,20 @@ export function startGame(canvas, uiRoot) {
     run.papaZ = ease(run.papaZ, 0.7, 6, dt);
     run.papaX = ease(run.papaX, run.p.x + 0.55, 6, dt);
     run.p.y = ease(run.p.y, 0, 10, dt);
-    run.smackT -= dt;
-    if (run.caughtT > 0.5 && run.smackT <= 0) {
-      run.smackT = 0.32;
+    run.jolt = Math.max(0, run.jolt - dt * 6);
+    // Each whack lands as the chaser's arm comes down (see SPANK_PERIOD): crack, stars, Beta jolts, the screen shakes.
+    const n = Math.floor(run.caughtT / SPANK_PERIOD);
+    if (n > run.hits && run.caughtT < CAUGHT_SCENE_TIME - 0.3) {
+      run.hits = n;
       audio.play('smack');
-      fx.burst(run.p.x, 1.6, run.z, 0xffd60a, 5, { speed: 2, up: 3, life: 0.5, scale: 1.4 });
+      vibrate(35);
+      shake = Math.max(shake, 0.18);
+      run.jolt = 1;
+      run.squash = 1;
+      fx.burst(run.p.x, 0.95, run.z + 0.2, 0xffd60a, 7, { speed: 2.5, up: 2.5, life: 0.45, scale: 1.3 });
+      if (n % 2) fx.burst(run.p.x, 1.7, run.z - 0.15, 0x6ec6ff, 3, { speed: 1.2, up: 1.5, life: 0.6, gravity: -5, scale: 0.6 }); // tears
+      if (n > 1) ui.flash(HIT_WORDS[n % HIT_WORDS.length]);
+      if (n === 3) shout('और भागेगा?');
     }
     if (run.caughtT > CAUGHT_SCENE_TIME) {
       const r = finishRun();
@@ -642,7 +671,7 @@ export function startGame(canvas, uiRoot) {
 
   function placeActors(dt) {
     const p = run.p;
-    beta.group.position.set(p.x, p.y, run.z);
+    beta.group.position.set(p.x, p.y + run.jolt * 0.1, run.z - run.jolt * 0.15); // jolts forward with each whack
     beta.group.rotation.y = 0;
     run.squash = Math.max(0, (run.squash || 0) - dt * 6); // landing squash
     const q = Math.sin(run.squash * Math.PI) * 0.12;
@@ -660,10 +689,11 @@ export function startGame(canvas, uiRoot) {
     chaserBike.visible = state === 'playing' && run.chasing;
     if (chaserBike.visible) for (const w of chaserWheels) w.rotation.x -= (dt * run.speed) / 0.32;
     if (bike.visible) for (const w of bikeWheels) w.rotation.x -= (dt * run.speed * CYCLE_BOOST) / 0.32;
+    if (state !== 'playing') warnLane.visible = false;
     const caught = state === 'caught' || state === 'over';
     run.floorS = ease(run.floorS, run.ground, 5, dt); // camera rises with Beta onto a bus roof, ignores jumps
     const camTarget = caught
-      ? new THREE.Vector3(p.x * 0.4 + 1.2, 2.0, run.z - 4.4) // front, road side: never inside buildings
+      ? new THREE.Vector3(p.x * 0.4 + 1.2, 2.0, run.z - 4.4 + Math.min(run.caughtT, 2.5) * 0.35) // front, road side, slowly pushing in
       : new THREE.Vector3(p.x * 0.6, 3.2 + run.floorS + (p.y - run.floorS) * 0.3, run.z + 6.5);
     camera.position.lerp(camTarget, Math.min(1, dt * (caught ? 2.5 : run.t < 1.4 ? 3 : 8))); // slow swoop at the start
     if (shake > 0) {
