@@ -34,3 +34,13 @@ test('silent without a Hindi voice, when off, or without speech at all; picks up
   const broken = { getVoices() { throw new Error('no'); }, addEventListener() {} };
   assert.equal(createVoice(broken, U).available(), false);
 });
+
+test('Papa takes a male Hindi voice when there is one', () => {
+  const s = synth([]);
+  s.getVoices = () => [{ lang: 'hi-IN', name: 'Hindi Female' }, { lang: 'hi-IN', name: 'Microsoft Madhur' }];
+  const v = createVoice(s, U);
+  v.say('रुक जा!', 'papa');
+  v.say('बेलन देखा है?', 'mummy');
+  assert.equal(s.spoken[0].voice.name, 'Microsoft Madhur');
+  assert.equal(s.spoken[1].voice.name, 'Hindi Female');
+});

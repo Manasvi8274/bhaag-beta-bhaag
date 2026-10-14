@@ -3,7 +3,7 @@ import { SPEED_START, SPEED_MAX, SPEED_RAMP, LANES, VERSION, CHASER_FAR } from '
 import { createPlayer, applyAction, updatePlayer, getHitbox } from './player.js';
 import { aabbOverlap, firstHit, groundAt } from './collision.js';
 import { createSpawner, spawnUntil } from './spawner.js';
-import { createChaser, stumble, catchNow, updateChaser, throwDue, angryThrowDue, startChase, chaseActive } from './chaser.js';
+import { createChaser, stumble, chappalHit, catchNow, updateChaser, throwDue, angryThrowDue, startChase, chaseActive } from './chaser.js';
 import { createStickman, HEROES, CHASERS } from './stickman.js';
 import { createProp, setPropsNight, addHeadlights, PROP_NAMES, buildBicycle } from './props.js';
 import { createWorld, lampForLight, LAMP_HEAD_Y } from './world.js';
@@ -30,8 +30,10 @@ const GROUND_DAY = new THREE.Color(0x8a7a66), GROUND_NIGHT = new THREE.Color(0x3
 // Each chaser: what they throw, the warning, the menu line and their taunts.
 const CHASER_INFO = {
   papa: { throws: 'chappal', warn: '⚠️ Chappal aayi!', line: 'Papa is coming with the chappal!', chase: 'Papa ne cycle utha li!', tired: 'Papa thak gaye!',
-    taunts: [['Ruk ja!', 'रुक जा!'], ['Ruk ja nalayak!', 'रुक जा नालायक!'], ['Aaj nahi chhodunga!', 'आज नहीं छोड़ूँगा!'],
-      ['Remote kahan hai?!', 'रिमोट कहाँ है?'], ['Ghar chal tu!', 'घर चल तू!'], ['Bas ek baar haath aa!', 'बस एक बार हाथ आ!']] },
+    taunts: [['Ruk ja nalayak!', 'रुक जा नालायक!'], ['Aaj teri khair nahi!', 'आज तेरी ख़ैर नहीं!'],
+      ['Remote tod diya?! Ruk!', 'रिमोट तोड़ दिया? रुक!'], ['Ghar aa, phir batata hoon!', 'घर आ, फिर बताता हूँ!'],
+      ['Sharma ji ka beta dekh!', 'शर्मा जी का बेटा देख!'], ['Isi din ke liye padhaya tha?!', 'इसी दिन के लिए पढ़ाया था?'],
+      ['Chappal dekhi hai meri?!', 'चप्पल देखी है मेरी?'], ['Match chhoot gaya mera!', 'मैच छूट गया मेरा!']] },
   mummy: { throws: 'belan', warn: '⚠️ Belan aaya!', line: 'Mummy is coming with the belan!', chase: 'Mummy ne cycle utha li!', tired: 'Mummy thak gayi!',
     taunts: [['Ruk ja!', 'रुक जा!'], ['Homework kaun karega?!', 'होमवर्क कौन करेगा?'], ['Aaj khaana band!', 'आज खाना बंद!'],
       ['Belan dekha hai?!', 'बेलन देखा है?'], ['Ghar aa, phir batati hoon!', 'घर आ, फिर बताती हूँ!']] },
@@ -427,14 +429,14 @@ export function startGame(canvas, uiRoot) {
     vibrate(70);
     audio.play('stumble');
     fx.burst(p.x, 0.3, run.z, 0xb5a99a, 10, { speed: 3, up: 2 });
-    if (stumble(run.chaser) === 'caught') { enterCaught(); return; }
+    if ((hit.obstacle.name === 'chappal' ? chappalHit : stumble)(run.chaser) === 'caught') { enterCaught(); return; }
     const [shown, spoken] = pick(chaserInfo().taunts);
     ui.flash(shown);
     shout(spoken);
   }
 
   // Papa's chappal: a warning, then it flies down the lane Beta is in. Dodge, jump or slide; a hit is a stumble
-  // (and so right after one, Pakda!).
+  // (but never the catch by itself, see chappalHit).
   function updateChappals(dt) {
     if (throwDue(run.chaser) || angryThrowDue(run.chaser, -run.z)) {
       run.pendingThrow = THROW_WINDUP;

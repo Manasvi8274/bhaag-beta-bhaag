@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createChaser, stumble, catchNow, updateChaser, isVisible, throwDue, THROW_AT, angryThrowDue, angryGap, ANGRY_FROM, startChase, chaseActive, CHASE_TIME, CHASE_DIST } from '../src/chaser.js';
+import { createChaser, stumble, chappalHit, catchNow, updateChaser, isVisible, throwDue, THROW_AT, angryThrowDue, angryGap, ANGRY_FROM, startChase, chaseActive, CHASE_TIME, CHASE_DIST } from '../src/chaser.js';
 import { STUMBLE_WINDOW, CHASER_FAR, CHASER_NEAR } from '../src/config.js';
 
 const run = (c, secs, dt = 0.1) => { for (let i = 0; i < Math.round(secs / dt); i++) updateChaser(c, dt); };
@@ -86,4 +86,15 @@ test('cycle chase: closes in, throws every couple of seconds, then drops back', 
   assert.equal(c.chaseFrom, c.lastStumble, 'clean escape');
   run(c, 10);
   assert.equal(c.distance, CHASER_FAR);
+});
+
+test('a chappal hit right after a stumble keeps Papa close but does not catch', () => {
+  const c = createChaser();
+  assert.equal(chappalHit(c), 'stumble', 'first hit is a normal stumble');
+  run(c, 2);
+  assert.equal(chappalHit(c), 'stumble');
+  assert.equal(c.caught, false);
+  assert.equal(c.distance, CHASER_NEAR);
+  run(c, 1);
+  assert.equal(stumble(c), 'caught', 'an obstacle still catches inside the window');
 });

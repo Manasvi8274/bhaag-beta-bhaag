@@ -17,6 +17,15 @@ export function stumble(c) {
   return 'stumble';
 }
 
+// A thrown chappal hurts but never ends the run on its own: it comes from behind, where Beta can't see it.
+// Right after a stumble it just keeps Papa close a bit longer.
+export function chappalHit(c) {
+  if (c.caught || c.time - c.lastStumble > STUMBLE_WINDOW) return stumble(c);
+  c.lastStumble = c.time;
+  c.distance = CHASER_NEAR;
+  return 'stumble';
+}
+
 export function catchNow(c) {
   c.caught = true;
   c.distance = 0;
