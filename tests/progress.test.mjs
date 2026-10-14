@@ -149,3 +149,15 @@ test('records and badges: lifetime totals add up across revives, each badge pays
   assert.equal(createProgress(s).data.life.runs, 2, 'saved');
   assert.equal(new Set(ACHIEVEMENTS.map((a) => a.id)).size, ACHIEVEMENTS.length);
 });
+
+test('ghost: keeps the best challenge run of the day only', () => {
+  const s = mem();
+  const p = createProgress(s);
+  const run = (d) => ({ x: [0, 0], y: [0, 0], d: [0, d], m: [0, 0], next: 0.2 });
+  assert.equal(p.ghostFor('2026-10-14'), null);
+  assert.equal(p.saveGhost('2026-10-14', 500, run(500)), true);
+  assert.equal(p.saveGhost('2026-10-14', 400, run(400)), false, 'worse run kept out');
+  assert.equal(p.ghostFor('2026-10-14').d[1], 500);
+  assert.equal(p.ghostFor('2026-10-15'), null, 'a new day starts fresh');
+  assert.equal(p.saveGhost('2026-10-15', 100, run(100)), true);
+});

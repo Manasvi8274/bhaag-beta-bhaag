@@ -18,6 +18,7 @@ import { createAds, createWebAds } from './ads.js';
 import { drawCard, shareRun } from './share.js';
 import { createVoice } from './voice.js';
 import { festivalOn } from './festival.js';
+import { createRecorder, record, ghostAt, ghostDistance } from './ghost.js';
 import { createProgress, SKINS, CHARACTERS, dailyChallenge, ACHIEVEMENTS } from './progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL, POWERUP_TIME } from './powerups.js';
 
@@ -49,7 +50,7 @@ const NEWS = [
   ['🌙', 'Day turns to night as you run: streetlights, lit windows, neon signs, stars'],
   ['🛤️', 'Three mohallas: Market Gali, Railway Colony (watch the train!), Mandir Marg'],
   ['🛵', 'New on the road: scooter uncle, sleeping dogs, cement pipes'],
-  ['📅', "Aaj ka Challenge: one street for everyone each day, reach the goal for 300 coins. Share your run with friends!"],
+  ['📅', "Aaj ka Challenge: one street for everyone each day, reach the goal for 300 coins, and race your own ghost!"],
   ['🌧️', 'Monsoon spells with thunder, and fireworks at night'],
   ['🚲', "New power-up: Bhaiya Ki Cycle! Ride faster and smash through everything"],
   ['🗣️', 'Papa, Mummy and Dadi now shout their taunts out loud in Hindi (turn it off in pause)'],
@@ -90,6 +91,8 @@ export function startGame(canvas, uiRoot) {
   const heroes = Object.fromEntries(HEROES.map((t) => [t, createStickman(t)]));
   const chasers = Object.fromEntries(CHASERS.map((t) => [t, createStickman(t)]));
   let beta = heroes.beta, papa = chasers.papa;
+  const ghosts = Object.fromEntries(HEROES.map((t) => [t, createStickman(t, { ghost: true })])); // daily-challenge ghost
+  for (const g of Object.values(ghosts)) { g.group.visible = false; scene.add(g.group); }
   const bubble = new THREE.Mesh(new THREE.SphereGeometry(1.15, 20, 14),
     new THREE.MeshStandardMaterial({ color: 0xff70a6, emissive: 0xff70a6, emissiveIntensity: 0.4, transparent: true, opacity: 0.22, depthWrite: false }));
   bubble.position.y = 0.95;
@@ -190,6 +193,7 @@ export function startGame(canvas, uiRoot) {
     const seed = daily ? ch.seed : (Math.random() * 1e9) | 0;
     run = {
       p: createPlayer(), z: 0, speed: SPEED_START, prevLane: 1, t: 0, hint: 0, daily, goal: ch.goal, goalHit: false,
+      rec: daily ? createRecorder() : null, ghost: daily ? progress.ghostFor(today()) : null, ghostBeat: false,
       spawner: createSpawner(seed), chaser: createChaser(), pu: createPowerups(),
       items: [], hitSet: new Set(), coins: 0, committed: 0, score: 0, stumbleT: 0, invuln: 0,
       caughtT: 0, smackT: 0, papaZ: 3, papaX: 0, zone: 0, ground: 0, floorS: 0, pendingThrow: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
@@ -204,7 +208,7 @@ export function startGame(canvas, uiRoot) {
     ui.setScore(0, 0, run.mult);
     ui.setPowerups([]);
     ui.flash('Bhaag!');
-    if (daily) ui.toast(`📅 Aaj ka Challenge: reach ${ch.goal} m!`);
+    if (daily) ui.toast(run.ghost ? `👻 Race your best today: ${Math.floor(ghostDistance(run.ghost))} m` : `📅 Aaj ka Challenge: reach ${ch.goal} m!`);
     audio.setZone(0);
     shout(`${progress.data.hero === 'beti' ? 'बेटी' : 'बेटा'}! रुक जा!`);
     audio.startMusic();
@@ -245,6 +249,7 @@ export function startGame(canvas, uiRoot) {
     if (!progress.data.tutorialDone) progress.setSetting('tutorialDone', true);
     const r = progress.finishRun(run.stats);
     const paid = run.daily ? progress.completeChallenge(today(), run.stats.distance) : 0;
+    if (run.rec) progress.saveGhost(today(), run.stats.distance, run.rec);
     if (paid) r.completed.push({ text: 'Aaj ka Challenge', reward: paid });
     const delta = Object.fromEntries(Object.entries(run.stats).map(([k, v]) => [k, v - (run.recorded?.[k] || 0)]));
     for (const a of progress.recordRun(delta, !run.recorded, run.stats)) r.completed.push({ text: `🏅 ${a.text.split(':')[0]}`, reward: a.reward });
@@ -556,7 +561,10 @@ export function startGame(canvas, uiRoot) {
     ui.setScore(run.score, run.coins, run.mult);
     ui.setPowerups(listActive(run.pu));
     const glance = run.chaser.distance < CHASER_FAR && Math.sin(run.t * 1.7) > 0.85; // Papa is close: look back now and then
-    beta.setMode(run.riding ? 'ride' : run.stumbleT > 0 ? 'stumble' : !p.grounded ? 'jump' : p.sliding ? 'slide' : glance ? 'look' : 'run');
+    const pose = run.riding ? 'ride' : run.stumbleT > 0 ? 'stumble' : !p.grounded ? 'jump' : p.sliding ? 'slide' : glance ? 'look' : 'run';
+    beta.setMode(pose);
+    if (run.rec) record(run.rec, run.t, p.x, p.y, -run.z, pose);
+    if (run.ghost && !run.ghostBeat && -run.z > ghostDistance(run.ghost)) { run.ghostBeat = true; ui.toast('👻 You beat your best challenge run!'); audio.play('powerup'); }
     papa.setMode(run.chasing ? 'ride' : 'run');
     run.papaZ = ease(run.papaZ, run.chaser.distance, run.t < 2 ? 1 : 4, dt);
     run.papaX = ease(run.papaX, p.x + (p.x < 0 ? -0.85 : 0.85), 3, dt); // half a lane outside, so he never hides Beta
@@ -643,6 +651,9 @@ export function startGame(canvas, uiRoot) {
     sun.position.set(p.x + 6, 14, run.z + 4);
     sun.target.position.set(p.x, 0, run.z - 4);
     betaLight.position.set(p.x, p.y + 3, run.z + 2.5);
+    const ghost = ghosts[progress.data.hero], g = state === 'playing' ? ghostAt(run.ghost, run.t) : null;
+    for (const x of Object.values(ghosts)) x.group.visible = x === ghost && !!g;
+    if (g) { ghost.group.position.set(g.x, g.y, -g.d); ghost.setMode(g.mode); ghost.update(dt, run.speed); }
     bike.visible = state === 'playing' && run.riding;
     chaserBike.visible = state === 'playing' && run.chasing;
     if (chaserBike.visible) for (const w of chaserWheels) w.rotation.x -= (dt * run.speed) / 0.32;
@@ -671,6 +682,7 @@ export function startGame(canvas, uiRoot) {
   }
 
   function menuScene(t) {
+    for (const g of Object.values(ghosts)) g.group.visible = false;
     speedLines.update(0, camera, 0, 0);
     beta.setMode('idle');
     papa.setMode('spank');

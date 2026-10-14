@@ -86,8 +86,18 @@ export function createProgress(storage) {
   }
   const save = () => { try { storage?.setItem(KEY, JSON.stringify(d)); } catch { /* storage full or blocked */ } };
 
+  const GHOST_KEY = 'bbb-ghost-v1';
   return {
     get data() { return d; },
+    // The day's best challenge run, replayed as a ghost. Kept apart from the save (it is a few KB) and only for today.
+    ghostFor(date) {
+      try { const g = JSON.parse(storage?.getItem(GHOST_KEY) || 'null'); return g?.date === date ? g.run : null; } catch { return null; }
+    },
+    saveGhost(date, distance, run) {
+      const old = this.ghostFor(date);
+      if (old && old.d[old.d.length - 1] >= distance) return false;
+      try { storage?.setItem(GHOST_KEY, JSON.stringify({ date, run: { x: run.x, y: run.y, d: run.d, m: run.m } })); return true; } catch { return false; }
+    },
     save,
     multiplier: () => 1 + Math.min(9, Math.floor(d.level / 3)),
     addCoins(n) { d.coins += n; save(); },

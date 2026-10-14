@@ -147,10 +147,14 @@ function targets(mode, s, t, phase, type) {
   return o;
 }
 
-export function createStickman(type) {
+const GHOST = new THREE.MeshBasicMaterial({ color: 0x9bd4ff, transparent: true, opacity: 0.35, depthWrite: false });
+
+// ghost: a see-through copy (the daily-challenge ghost): one shared translucent material, no shadow.
+export function createStickman(type, { ghost = false } = {}) {
   const R = HEROES.includes(type) ? 0.085 : 0.1;
   const { group, joints } = buildBody(R);
   const skin = addAccessories(type, group, joints);
+  if (ghost) group.traverse((o) => { if (o.isMesh) { o.material = GHOST; o.castShadow = false; } });
   let mode = 'idle', phase = 0, t = 0;
   return {
     group,

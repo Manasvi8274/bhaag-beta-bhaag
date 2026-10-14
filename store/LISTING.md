@@ -27,7 +27,7 @@ sabzi thelas and buses, duck under shaadi banners, and leap over potholes. Trip 
 🏅 **Badges & records** – 11 badges to earn (Raat ka Raja, Mandir Darshan, Papa se Tez…) and your lifetime records
 👧 **Beta or Beti** – choose who runs, and who chases: Papa with the chappal, Mummy with the belan, or Dadi with her lathi
 🛒 **Beta Ki Dukaan** – spend coins on characters, caps and school bags
-📅 **Aaj ka Challenge** – a new street every day, the same for everyone: reach the goal for bonus coins
+📅 **Aaj ka Challenge** – a new street every day, the same for everyone: reach the goal for bonus coins and race the ghost of your best try
 📤 **Share your run** – a score card of the moment you got caught, straight to WhatsApp
 🎁 **Daily Inaam** – come back every day for bigger rewards
 🚌 **Bus-roof running** – take the ramp, run on the roof, grab the coins up there
