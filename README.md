@@ -15,13 +15,14 @@ An endless runner through Indian streets, starring stickmen. It runs in the brow
   - **Railway Colony:** with a passing express train.
   - **Mandir Marg:** temple, diyas, string lights and fireworks.
 - **Desi traffic:** cows, autos, buses (run up the ramp onto the roof), sabzi thelas, scooter uncle riding the wrong way, sleeping dogs, potholes, shaadi banners.
-- **Chasers that fight back:** Papa throws his chappal after a stumble, and after 1 km he also throws from afar. Mummy throws a belan and Dadi swings a lathi; unlock them in the shop. You can play as Beta or Beti.
+- **Chasers that fight back:** Papa throws his chappal after a stumble, and after 1 km he also throws from afar. Every 1.5 km he grabs a cycle for a short, hard chase. Mummy throws a belan and Dadi swings a lathi; unlock them in the shop. You can play as Beta or Beti. Chasers shout their taunts in Hindi through the phone's text-to-speech.
+- **Festivals:** in Diwali week, every street gets string lights and fireworks (`?festival=diwali` to preview).
 - **Power-ups:** Mummy's Shield, Dadi's Ladoo Magnet, Doodh Power Jump, Double Coins, and Bhaiya Ki Cycle (ride and smash through everything). Each can be upgraded in the shop.
 - **Things to come back for:**
   - Missions that raise your score multiplier.
   - 11 badges and your lifetime records.
   - A daily login reward.
-  - **Aaj ka Challenge:** a seeded street that's the same for everyone that day.
+  - **Aaj ka Challenge:** a seeded street that's the same for everyone that day, with the ghost of your best try to race.
   - "Bal bal bache!" bonus coins for last-moment dodges.
   - A share card of the moment you got caught.
 
@@ -54,6 +55,9 @@ npm test                        # node:test, no dependencies
 | `src/audio.js` | All sound is synthesised with Web Audio: dhol + tumbi music, horns, the train, thunder. No audio files. |
 | `src/ads.js` | Optional rewarded ads: AdMob on Android, H5 Games Ads on the web (off until AdSense approves the site). |
 | `src/share.js` | The score card and the share sheet. |
+| `src/voice.js` | Hindi text-to-speech shouts (silent where the phone has no Hindi voice). |
+| `src/ghost.js` | Records and replays the daily-challenge ghost. |
+| `src/festival.js` | Festival dates (Diwali week). |
 
 **Performance on budget phones:**
 - Draw calls are kept around 400–570.
