@@ -30,10 +30,11 @@ const POOL = [
 ];
 // Power-up upgrades: each level makes that power-up last 25% longer.
 export const UPGRADE_COST = [250, 600, 1200, 2500, 5000];
+export const HEADSTART_COST = 300;
 export const DAILY_REWARDS = [50, 75, 100, 150, 200, 300, 500];
 const KEY = 'bbb-save-v1';
 const DEFAULTS = { coins: 0, best: 0, skin: 'classic', owned: ['classic'], muted: false, vibrate: true, voice: true,
-  tutorialDone: false, level: 0, missions: null, lastDaily: null, streak: 0, challengeDone: null, badges: [], bestDistance: 0, hero: 'beta', chaser: 'papa', chars: ['beta', 'papa'] };
+  tutorialDone: false, level: 0, missions: null, lastDaily: null, streak: 0, challengeDone: null, badges: [], bestDistance: 0, hero: 'beta', chaser: 'papa', chars: ['beta', 'papa'], headstarts: 0 };
 
 function makeMission(level, taken) {
   const tier = Math.floor(level / 3);
@@ -101,6 +102,9 @@ export function createProgress(storage) {
     save,
     multiplier: () => 1 + Math.min(9, Math.floor(d.level / 3)),
     addCoins(n) { d.coins += n; save(); },
+    addHeadstart(n = 1) { d.headstarts += n; save(); },
+    buyHeadstart() { if (d.coins < HEADSTART_COST) return false; d.coins -= HEADSTART_COST; d.headstarts += 1; save(); return true; },
+    useHeadstart() { if (d.headstarts < 1) return false; d.headstarts -= 1; save(); return true; },
     spend(n) { if (d.coins < n) return false; d.coins -= n; save(); return true; },
     buy(id) {
       const s = SKINS[id];
@@ -137,7 +141,7 @@ export function createProgress(storage) {
     finishRun(stats) {
       const isNewBest = stats.score > d.best;
       if (isNewBest) d.best = stats.score;
-      const completed = [];
+      const completed = [], multBefore = this.multiplier();
       for (let i = 0; i < 3; i++) {
         const m = d.missions[i];
         if ((stats[m.stat] || 0) >= m.goal) {
@@ -146,6 +150,12 @@ export function createProgress(storage) {
           d.level += 1;
           d.missions[i] = makeMission(d.level, d.missions.filter((_, j) => j !== i).map((x) => x.stat));
         } else m.flashed = false;
+      }
+      const mult = this.multiplier();
+      if (mult > multBefore) { // a full set of 3 missions: multiplier up, and a bonus
+        const reward = 100 * mult;
+        d.coins += reward;
+        completed.push({ text: `⭐ Multiplier up! Now x${mult}`, reward });
       }
       save();
       return { isNewBest, completed };

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPlayer, applyAction, updatePlayer, getHitbox } from '../src/player.js';
-import { LANES, LANE_SWITCH_TIME, SLIDE_TIME, PLAYER_H, PLAYER_SLIDE_H } from '../src/config.js';
+import { LANES, LANE_SWITCH_TIME, SLIDE_TIME, PLAYER_H, PLAYER_SLIDE_H, SPEED_START, SPEED_MAX, SPEED_LEVELS, speedLevel, speedFor } from '../src/config.js';
 
 const run = (p, secs, dt = 1 / 60) => { for (let t = 0; t < secs; t += dt) updatePlayer(p, dt); };
 
@@ -96,3 +96,12 @@ test('ground height: carried up a ramp, runs on a roof, falls off the end', () =
   assert.ok(p.grounded && p.y === 0);
 });
 function run2(p, secs, g) { for (let t = 0; t < secs; t += 1 / 60) updatePlayer(p, 1 / 60, g); }
+
+test('speed levels: each score threshold is one Speed Up, from start speed to max', () => {
+  assert.equal(speedLevel(0), 0);
+  assert.equal(speedLevel(SPEED_LEVELS[1] - 1), 0);
+  assert.equal(speedLevel(SPEED_LEVELS[1]), 1);
+  assert.equal(speedLevel(1e9), SPEED_LEVELS.length - 1);
+  assert.equal(speedFor(0), SPEED_START);
+  assert.equal(speedFor(SPEED_LEVELS.length - 1), SPEED_MAX);
+});

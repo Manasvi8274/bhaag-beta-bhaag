@@ -17,9 +17,11 @@ An endless runner through Indian streets, starring stickmen. It runs in the brow
 - **Desi traffic:** cows, autos, buses (run up the ramp onto the roof), sabzi thelas, scooter uncle riding the wrong way, sleeping dogs, potholes, shaadi banners.
 - **Chasers that fight back:** Papa throws his chappal after a stumble, and after 1 km he also throws from afar. Every 1.5 km he grabs a cycle for a short, hard chase. Mummy throws a belan and Dadi swings a lathi; unlock them in the shop. You can play as Beta or Beti. Chasers shout their taunts in Hindi through the phone's text-to-speech.
 - **Festivals:** in Diwali week, every street gets string lights and fireworks (`?festival=diwali` to preview).
-- **Power-ups:** Mummy's Shield, Dadi's Ladoo Magnet, Doodh Power Jump, Double Coins, and Bhaiya Ki Cycle (ride and smash through everything). Each can be upgraded in the shop.
+- **Power-ups:** Mummy's Shield, Dadi's Ladoo Magnet, Doodh Power Jump, Double Coins, Bhaiya Ki Cycle (ride and smash through everything), Diwali Rocket (fly above the street over a trail of sky coins) and Score Dugna (double score). Each can be upgraded in the shop, and its timer shows on the right while it lasts.
+- **Mystery Dabba:** a gift box with coins, a power-up or a Rocket Start inside. Buy Rocket Starts in the shop and launch one in the first seconds of a run.
+- **Speed Up levels:** the game gets faster each time your score passes a threshold.
 - **Things to come back for:**
-  - Missions that raise your score multiplier.
+  - Missions (progress in the pause menu); every 3 done raises your score multiplier and pays a bonus.
   - 11 badges and your lifetime records.
   - A daily login reward.
   - **Aaj ka Challenge:** a seeded street that's the same for everyone that day, with the ghost of your best try to race.

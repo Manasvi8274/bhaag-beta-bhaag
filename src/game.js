@@ -1,5 +1,5 @@
 import * as THREE from '../vendor/three.module.js';
-import { SPEED_START, SPEED_MAX, SPEED_RAMP, LANES, VERSION, CHASER_FAR } from './config.js';
+import { SPEED_START, SPEED_MAX, SPEED_RAMP, LANES, VERSION, CHASER_FAR, speedLevel, speedFor } from './config.js';
 import { createPlayer, applyAction, updatePlayer, getHitbox } from './player.js';
 import { aabbOverlap, firstHit, groundAt } from './collision.js';
 import { createSpawner, spawnUntil } from './spawner.js';
@@ -19,8 +19,8 @@ import { drawCard, shareRun } from './share.js';
 import { createVoice } from './voice.js';
 import { festivalOn } from './festival.js';
 import { createRecorder, record, ghostAt, ghostDistance } from './ghost.js';
-import { createProgress, SKINS, CHARACTERS, dailyChallenge, ACHIEVEMENTS } from './progress.js';
-import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL, POWERUP_TIME } from './powerups.js';
+import { createProgress, HEADSTART_COST, SKINS, CHARACTERS, dailyChallenge, ACHIEVEMENTS } from './progress.js';
+import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL, POWERUP_TIME, HEADSTART_TIME, mysteryPrize } from './powerups.js';
 
 const CAUGHT_SCENE_TIME = 2.9;
 const HIT_WORDS = ['CHATAK!', 'DHAP!', 'THAPAK!', 'CHAPAAK!'];
@@ -49,6 +49,10 @@ const MILESTONE = 500;
 const FIREWORKS = [0xff3b3b, 0xffd60a, 0x3aff7a, 0x3a86ff, 0xff70ff, 0xffffff];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const NEWS = [
+  ['🚀', 'Diwali Rocket: fly over the street and grab the coins in the sky! Buy a Rocket Start in the shop'],
+  ['🎁', 'Mystery Dabba: coins, a power-up or a free Rocket Start inside'],
+  ['⭐', 'Score Dugna doubles your score; power-up timers now show on the right'],
+  ['⚡', 'Speed Up levels as your score climbs, and a bonus for every 3 missions'],
   ['👧', 'Play as Beti! And choose who chases you: Papa (chappal), Mummy (belan) or Dadi (lathi) in the shop'],
   ['🌙', 'Day turns to night as you run: streetlights, lit windows, neon signs, stars'],
   ['🛤️', 'Three mohallas: Market Gali, Railway Colony (watch the train!), Mandir Marg'],
@@ -60,6 +64,7 @@ const NEWS = [
   ['🚲', 'Every 1.5 km Papa grabs a cycle and chases hard. Survive it clean for 50 coins!'],
   ['😡', 'After 1 km Papa throws his chappal from afar. Dodge close for "Bal bal bache!" coins'],
 ];
+const ROCKET_Y = 7.4, HEADSTART_WINDOW = 6; // flying height (above the street wires); seconds the Rocket Start button stays up
 const HINTS = [[0.8, '👈 Swipe left / right 👉'], [4.5, '👆 Swipe up to jump'], [8, '👇 Swipe down to slide']];
 
 const ease = (cur, target, rate, dt) => cur + (target - cur) * Math.min(1, dt * rate);
@@ -106,6 +111,10 @@ export function startGame(canvas, uiRoot) {
   warnLane.rotation.x = -Math.PI / 2;
   warnLane.visible = false;
   scene.add(warnLane);
+  const rocketPack = createProp('rocket');
+  rocketPack.scale.setScalar(0.9);
+  rocketPack.visible = false;
+  scene.add(rocketPack);
   const bike = new THREE.Group();
   const bikeWheels = buildBicycle(bike);
   bike.visible = false;
@@ -151,21 +160,23 @@ export function startGame(canvas, uiRoot) {
     onSound() { progress.setSetting('muted', !progress.data.muted); audio.setMuted(progress.data.muted); ui.setSettings(settings()); },
     onVoice() { progress.setSetting('voice', !progress.data.voice); ui.setSettings(settings()); },
     onVibrate() { progress.setSetting('vibrate', !progress.data.vibrate); ui.setSettings(settings()); vibrate(40); },
-    onShop: () => ui.showShop(SKINS, progress.data, upgradeList(), CHARACTERS),
+    onShop: () => shop(),
+    onBuyHeadstart() { if (progress.buyHeadstart()) audio.play('powerup'); shop(); ui.setWallet(progress.data.coins); },
+    onHeadstart: () => useHeadstart(),
     onChar(kind, id) {
       const had = progress.data.chars.includes(id);
       if (progress.pickChar(kind, id)) { applyCharacters(); audio.play(had ? 'coin' : 'powerup'); }
-      ui.showShop(SKINS, progress.data, upgradeList(), CHARACTERS);
+      shop();
       ui.setWallet(progress.data.coins);
     },
     onUpgrade(name) {
       if (progress.upgrade(name)) audio.play('powerup');
-      ui.showShop(SKINS, progress.data, upgradeList(), CHARACTERS);
+      shop();
       ui.setWallet(progress.data.coins);
     },
     onSkin(id) {
       if (progress.select(id) || progress.buy(id)) { applySkin(); audio.play('powerup'); }
-      ui.showShop(SKINS, progress.data, upgradeList(), CHARACTERS);
+      shop();
       ui.setWallet(progress.data.coins);
     },
     onShare,
@@ -184,6 +195,7 @@ export function startGame(canvas, uiRoot) {
   ui.setInstallable(!!window.bbbInstall);
   window.addEventListener('bbb-install', () => ui.setInstallable(true));
   window.addEventListener('appinstalled', () => ui.setInstallable(false));
+  const shop = () => ui.showShop(SKINS, progress.data, upgradeList(), CHARACTERS, HEADSTART_COST);
   const upgradeList = () => Object.keys(POWERUP_TIME).map((name) => ({
     name, label: POWERUP_LABEL[name], level: progress.upgradeLevel(name), cost: progress.upgradeCost(name), secs: progress.powerupTime(name),
   }));
@@ -205,7 +217,7 @@ export function startGame(canvas, uiRoot) {
       rec: daily ? createRecorder() : null, ghost: daily ? progress.ghostFor(today()) : null, ghostBeat: false,
       spawner: createSpawner(seed), chaser: createChaser(), pu: createPowerups(),
       items: [], hitSet: new Set(), coins: 0, committed: 0, score: 0, stumbleT: 0, invuln: 0,
-      caughtT: 0, hits: 0, jolt: 0, throwHinted: false, papaZ: 3, papaX: 0, zone: 0, ground: 0, floorS: 0, pendingThrow: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
+      caughtT: 0, hits: 0, jolt: 0, throwHinted: false, scoreDist: 0, speedLvl: 0, flying: false, skyZ: 0, skyLane: 1, ticks: {}, papaZ: 3, papaX: 0, zone: 0, ground: 0, floorS: 0, pendingThrow: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
       dodgeT: -9, dodgeFromX: 0, milestone: 0, nextChase: CHASE_EVERY, chasing: false, rainStart: rainStartFor(daily ? (seed % 1000) / 1000 : Math.random()), thunderT: 3, flashT: 0, rained: false,
       stats: { score: 0, coins: 0, distance: 0, jumps: 0, slides: 0, powerups: 0, dodges: 0, nearMisses: 0, areas: 1, smashes: 0, night: 0, rain: 0 },
       recorded: null, // stats already added to the lifetime records (a revived run records only what is new)
@@ -216,6 +228,7 @@ export function startGame(canvas, uiRoot) {
     ui.showHUD();
     ui.setScore(0, 0, run.mult);
     ui.setPowerups([]);
+    ui.setHeadstart(progress.data.headstarts);
     ui.flash('Bhaag!');
     if (daily) ui.toast(run.ghost ? `👻 Race your best today: ${Math.floor(ghostDistance(run.ghost))} m` : `📅 Aaj ka Challenge: reach ${ch.goal} m!`);
     audio.setZone(0);
@@ -240,7 +253,7 @@ export function startGame(canvas, uiRoot) {
     audio.stopMusic();
     audio.setRain(0);
     ui.setSettings(settings()); // Hindi voices may have loaded since
-    ui.showPause();
+    ui.showPause(progress.data.missions.map((m) => ({ text: m.text, goal: m.goal, have: Math.min(m.goal, run.stats[m.stat] || 0) })));
   }
 
   function resume() {
@@ -342,6 +355,7 @@ export function startGame(canvas, uiRoot) {
     if (state !== 'playing') return;
     const p = run.p, wasGrounded = p.grounded;
     if (action === 'slide' && p.grounded && isActive(run.pu, 'cycle')) return; // no sliding on a bicycle
+    if (run.flying && (action === 'jump' || action === 'slide')) return;
     if (action === 'left' || action === 'right') run.prevLane = p.lane;
     if (!applyAction(p, action)) return;
     if (action === 'left' || action === 'right') { run.stats.dodges += 1; run.dodgeT = run.t; run.dodgeFromX = LANES[run.prevLane]; }
@@ -387,14 +401,55 @@ export function startGame(canvas, uiRoot) {
         run.lastCoinT = run.t;
         audio.play('coin', 2 ** (Math.min(run.streak, 12) / 24));
       } else {
-        activate(run.pu, item.name, progress.powerupTime(item.name));
         run.stats.powerups += 1;
         fx.burst(item.x, item.y + 0.4, item.z, 0xff70a6, 16, { speed: 4, up: 4 });
-        ui.toast(POWERUP_LABEL[item.name] + '!');
+        if (item.name === 'dabba') openDabba();
+        else {
+          activate(run.pu, item.name, progress.powerupTime(item.name));
+          ui.toast(POWERUP_LABEL[item.name] + '!');
+        }
         audio.play(item.name === 'cycle' ? 'tring' : 'powerup');
       }
       return false;
     });
+  }
+
+  function openDabba() {
+    const prize = mysteryPrize(Math.random());
+    if (prize.coins) { run.coins += prize.coins; run.stats.coins += prize.coins; ui.toast(`🎁 Mystery Dabba: +${prize.coins} 🪙`); }
+    else if (prize.powerup) { activate(run.pu, prize.powerup, progress.powerupTime(prize.powerup)); ui.toast(`🎁 Mystery Dabba: ${POWERUP_LABEL[prize.powerup]}!`); }
+    else { progress.addHeadstart(1); ui.toast('🎁 Mystery Dabba: a free 🚀 Rocket Start!'); }
+  }
+
+  // Rocket Start: during the first seconds of a run, the button launches the rocket for longer.
+  function useHeadstart() {
+    if (state !== 'playing' || run.t > HEADSTART_WINDOW || !progress.useHeadstart()) return;
+    activate(run.pu, 'rocket', HEADSTART_TIME);
+    ui.setHeadstart(0);
+    ui.flash('🚀 Rocket Start!');
+    audio.play('speedup');
+  }
+
+  // Diwali Rocket: Beta flies above the traffic (nothing can hit him) over a trail of sky coins, then drops back.
+  function updateRocket(dt) {
+    const p = run.p, flying = isActive(run.pu, 'rocket');
+    if (flying && !run.flying) { run.skyZ = run.z - 10; run.skyLane = p.lane; ui.flash('🚀 Udaan!'); }
+    if (!flying && run.flying) { run.invuln = Math.max(run.invuln, 1.5); ui.toast('Rocket khatam! Neeche aao!'); }
+    run.flying = flying;
+    if (!flying) return;
+    p.y = ease(p.y, ROCKET_Y, 3, dt);
+    Object.assign(p, { vy: 0, grounded: false, sliding: false, pendingSlide: false });
+    const reach = run.z - run.speed * run.pu.timers.rocket; // no sky coins past where the rocket runs out
+    while (run.skyZ > run.z - 60 && run.skyZ > reach) {
+      if (Math.random() < 0.08) run.skyLane = Math.max(0, Math.min(2, run.skyLane + (Math.random() < 0.5 ? -1 : 1)));
+      const item = { type: 'coin', x: LANES[run.skyLane], y: ROCKET_Y + 0.5, z: run.skyZ, w: 0.6, h: 0.6, d: 0.6 };
+      const mesh = createProp('coin');
+      mesh.position.set(item.x, item.y - 0.3, item.z);
+      scene.add(mesh);
+      run.items.push({ item, mesh });
+      run.skyZ -= 2.2;
+    }
+    if (Math.random() < dt * 40) fx.burst(p.x, p.y + 0.4, run.z + 0.5, Math.random() < 0.5 ? 0xff9f1c : 0xffd60a, 1, { speed: 1, up: -2, life: 0.35, gravity: -2 });
   }
 
   // On the cycle Beta ploughs through everything: each obstacle he meets goes flying.
@@ -416,6 +471,7 @@ export function startGame(canvas, uiRoot) {
 
   function hitObstacles(box) {
     const p = run.p;
+    if (run.flying) return;
     if (isActive(run.pu, 'cycle')) { smash(box); return; }
     if (run.invuln > 0) return;
     const live = run.items.filter(({ item }) => item.type === 'obstacle' && !run.hitSet.has(item)).map(({ item }) => item);
@@ -549,13 +605,18 @@ export function startGame(canvas, uiRoot) {
     if (-run.z >= (run.milestone + 1) * MILESTONE) { run.milestone += 1; ui.toast(`🏁 ${run.milestone * MILESTONE} m! Shabash!`); }
     audio.setTempo((run.speed - SPEED_START) / (SPEED_MAX - SPEED_START));
     if (run.hint < HINTS.length && run.t >= HINTS[run.hint][0]) ui.hint(HINTS[run.hint++][1]);
-    run.speed = Math.min(SPEED_MAX, run.speed + SPEED_RAMP * dt);
+    const lvl = speedLevel(run.score / run.mult);
+    if (lvl > run.speedLvl) { run.speedLvl = lvl; ui.flash(`⚡ Speed Up! ${lvl + 1}`); audio.play('speedup'); vibrate(30); }
+    run.speed = Math.min(speedFor(run.speedLvl), run.speed + SPEED_RAMP * dt);
     const riding = isActive(run.pu, 'cycle');
     if (run.riding && !riding) { fx.burst(p.x, 0.6, run.z, 0xd62828, 14, { speed: 4, up: 3 }); ui.toast('Cycle gayi! Ab paidal bhaago!'); }
     run.riding = riding;
-    run.z -= run.speed * (riding ? CYCLE_BOOST : 1) * dt;
+    const dz = run.speed * (riding ? CYCLE_BOOST : 1) * dt;
+    run.z -= dz;
+    run.scoreDist += dz * run.mult * (isActive(run.pu, 'score2x') ? 2 : 1);
     run.ground = groundAt({ ...getHitbox(p), z: run.z }, run.items.map((it) => it.item));
     updatePlayer(p, dt, run.ground);
+    updateRocket(dt);
     updateChaser(run.chaser, dt);
     updateChappals(dt);
     updateMovers(dt);
@@ -578,12 +639,19 @@ export function startGame(canvas, uiRoot) {
     nearMisses();
 
     run.stats.distance = Math.floor(-run.z);
-    run.score = run.stats.score = Math.floor(-run.z * run.mult) + run.coins * 10;
-    for (const m of progress.liveMissions(run.stats)) { ui.toast(`🎯 Mission done: ${m.text}`); audio.play('powerup'); }
-    ui.setScore(run.score, run.coins, run.mult);
-    ui.setPowerups(listActive(run.pu));
+    run.score = run.stats.score = Math.floor(run.scoreDist) + run.coins * 10;
+    for (const m of progress.liveMissions(run.stats)) { ui.toast(`🎯 Mission done! ${m.text} +🪙${m.reward}`); audio.play('powerup'); }
+    ui.setScore(run.score, run.coins, run.mult * (isActive(run.pu, 'score2x') ? 2 : 1));
+    const active = listActive(run.pu);
+    ui.setPowerups(active);
+    for (const a of active) { // tick-tick in the last 3 seconds of a power-up
+      const s = Math.ceil(a.left);
+      if (s <= 3 && run.ticks[a.name] !== s) { run.ticks[a.name] = s; audio.play('tick'); }
+      if (s > 3) delete run.ticks[a.name];
+    }
+    if (run.t > HEADSTART_WINDOW) ui.setHeadstart(0);
     const glance = run.chaser.distance < CHASER_FAR && Math.sin(run.t * 1.7) > 0.85; // Papa is close: look back now and then
-    const pose = run.riding ? 'ride' : run.stumbleT > 0 ? 'stumble' : !p.grounded ? 'jump' : p.sliding ? 'slide' : glance ? 'look' : 'run';
+    const pose = run.riding ? 'ride' : run.flying ? 'jump' : run.stumbleT > 0 ? 'stumble' : !p.grounded ? 'jump' : p.sliding ? 'slide' : glance ? 'look' : 'run';
     beta.setMode(pose);
     if (run.rec) record(run.rec, run.t, p.x, p.y, -run.z, pose);
     if (run.ghost && !run.ghostBeat && -run.z > ghostDistance(run.ghost)) { run.ghostBeat = true; ui.toast('👻 You beat your best challenge run!'); audio.play('powerup'); }
@@ -686,12 +754,14 @@ export function startGame(canvas, uiRoot) {
     for (const x of Object.values(ghosts)) x.group.visible = x === ghost && !!g;
     if (g) { ghost.group.position.set(g.x, g.y, -g.d); ghost.setMode(g.mode); ghost.update(dt, run.speed); }
     bike.visible = state === 'playing' && run.riding;
+    rocketPack.visible = state === 'playing' && run.flying;
+    if (rocketPack.visible) rocketPack.position.set(p.x, p.y + 0.75, run.z + 0.22);
     chaserBike.visible = state === 'playing' && run.chasing;
     if (chaserBike.visible) for (const w of chaserWheels) w.rotation.x -= (dt * run.speed) / 0.32;
     if (bike.visible) for (const w of bikeWheels) w.rotation.x -= (dt * run.speed * CYCLE_BOOST) / 0.32;
     if (state !== 'playing') warnLane.visible = false;
     const caught = state === 'caught' || state === 'over';
-    run.floorS = ease(run.floorS, run.ground, 5, dt); // camera rises with Beta onto a bus roof, ignores jumps
+    run.floorS = ease(run.floorS, run.flying ? p.y - 1.5 : run.ground, run.flying ? 2.5 : 5, dt); // camera rises with Beta onto a bus roof or the rocket, ignores jumps
     const camTarget = caught
       ? new THREE.Vector3(p.x * 0.4 + 1.2, 2.0, run.z - 4.4 + Math.min(run.caughtT, 2.5) * 0.35) // front, road side, slowly pushing in
       : new THREE.Vector3(p.x * 0.6, 3.2 + run.floorS + (p.y - run.floorS) * 0.3, run.z + 6.5);

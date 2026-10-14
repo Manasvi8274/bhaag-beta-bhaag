@@ -323,6 +323,24 @@ const BUILD = {
     g.add(r);
     add(g, new THREE.TorusGeometry(0.42, 0.03, 6, 24), 0xfff1a8, 0, 0.42, 0, { emissive: 0xffd60a });
   },
+  rocket(g) { // Diwali Rocket: a big red firework rocket on its stick, sparkling
+    add(g, new THREE.CylinderGeometry(0.13, 0.13, 0.45, 14), 0xd62828, 0, 0.42, 0, { emissive: 0x6a0a0a });
+    add(g, new THREE.ConeGeometry(0.15, 0.22, 14), 0xffd60a, 0, 0.75, 0, { emissive: 0x996600 });
+    for (const y of [0.3, 0.52]) add(g, new THREE.CylinderGeometry(0.135, 0.135, 0.05, 14), 0xffffff, 0, y, 0);
+    add(g, new THREE.CylinderGeometry(0.015, 0.015, 0.3, 6), 0x8b5a2b, 0, 0.1, 0);
+    add(g, new THREE.ConeGeometry(0.1, 0.2, 10), 0xff9f1c, 0, 0.12, 0, { emissive: 0xff6a00, emissiveIntensity: 1.5 }).rotation.x = Math.PI;
+  },
+  score2x(g) { // Score Dugna: a glowing star in a ring
+    add(g, new THREE.OctahedronGeometry(0.3, 0), 0x9b5de5, 0, 0.42, 0, { flatShading: true, emissive: 0x5a189a });
+    add(g, new THREE.TorusGeometry(0.4, 0.03, 6, 24), 0xe0aaff, 0, 0.42, 0, { emissive: 0x9b5de5 });
+  },
+  dabba(g) { // Mystery Dabba: a gift box with a ribbon
+    add(g, new THREE.BoxGeometry(0.55, 0.5, 0.55), 0x3a86ff, 0, 0.3, 0, { emissive: 0x0b2a6b });
+    add(g, new THREE.BoxGeometry(0.6, 0.12, 0.6), 0x1d4ed8, 0, 0.58, 0);
+    add(g, new THREE.BoxGeometry(0.12, 0.62, 0.62), 0xffd60a, 0, 0.32, 0, { emissive: 0x996600 });
+    add(g, new THREE.BoxGeometry(0.62, 0.62, 0.12), 0xffd60a, 0, 0.32, 0, { emissive: 0x996600 });
+    add(g, new THREE.TorusGeometry(0.1, 0.035, 6, 12), 0xffd60a, 0, 0.72, 0, { emissive: 0x996600 });
+  },
   coin(g) {
     const m = add(g, new THREE.CylinderGeometry(0.3, 0.3, 0.08, 24), 0xffc300, 0, 0.3, 0,
       { metalness: 0.6, roughness: 0.3, emissive: 0x553300, emissiveIntensity: 1 }); // glows brighter at night

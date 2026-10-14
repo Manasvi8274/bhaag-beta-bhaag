@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createProgress, SKINS, DAILY_REWARDS, UPGRADE_COST, CHARACTERS, dailyChallenge, CHALLENGE_REWARD, ACHIEVEMENTS } from '../src/progress.js';
-import { createPowerups, activate, updatePowerups, isActive, consume, listActive } from '../src/powerups.js';
+import { createProgress, HEADSTART_COST, SKINS, DAILY_REWARDS, UPGRADE_COST, CHARACTERS, dailyChallenge, CHALLENGE_REWARD, ACHIEVEMENTS } from '../src/progress.js';
+import { createPowerups, activate, updatePowerups, isActive, consume, listActive, mysteryPrize, POWERUP_TIME } from '../src/powerups.js';
 
 const mem = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v) }; };
 
@@ -48,8 +48,10 @@ test('missions complete, pay, get replaced and raise the multiplier', () => {
   assert.equal(p.data.level, 1);
   assert.equal(new Set(p.data.missions.map((m) => m.stat)).size, 3);
   assert.equal(p.finishRun({ score: 100 }).isNewBest, false);
-  for (let i = 0; i < 2; i++) { const m = p.data.missions[0]; p.finishRun({ score: 0, [m.stat]: m.goal }); }
+  let last;
+  for (let i = 0; i < 2; i++) { const m = p.data.missions[0]; last = p.finishRun({ score: 0, [m.stat]: m.goal }); }
   assert.equal(p.multiplier(), 2);
+  assert.deepEqual(last.completed.at(-1), { text: '⭐ Multiplier up! Now x2', reward: 200 }, 'a full set pays a bonus');
   for (let i = 0; i < 40; i++) { const m = p.data.missions[i % 3]; p.finishRun({ score: 0, [m.stat]: m.goal }); }
   assert.equal(p.multiplier(), 10, 'capped');
   assert.ok(p.data.missions.every((m) => m.goal > 0 && m.text.includes(String(m.goal))));
@@ -160,4 +162,26 @@ test('ghost: keeps the best challenge run of the day only', () => {
   assert.equal(p.ghostFor('2026-10-14').d[1], 500);
   assert.equal(p.ghostFor('2026-10-15'), null, 'a new day starts fresh');
   assert.equal(p.saveGhost('2026-10-15', 100, run(100)), true);
+});
+
+test('Rocket Starts: bought with coins, won, used up, saved', () => {
+  const store = mem(), p = createProgress(store);
+  assert.equal(p.buyHeadstart(), false, 'no coins');
+  assert.equal(p.useHeadstart(), false, 'none owned');
+  p.addCoins(HEADSTART_COST);
+  assert.equal(p.buyHeadstart(), true);
+  assert.equal(p.data.coins, 0);
+  p.addHeadstart();
+  assert.equal(createProgress(store).data.headstarts, 2, 'persisted');
+  assert.equal(p.useHeadstart(), true);
+  assert.equal(p.data.headstarts, 1);
+});
+
+test('Mystery Dabba prizes cover coins, every power-up and a Rocket Start', () => {
+  const prizes = Array.from({ length: 1000 }, (_, i) => mysteryPrize(i / 1000));
+  const coins = prizes.filter((x) => x.coins).map((x) => x.coins);
+  assert.deepEqual([...new Set(coins)].sort((a, b) => a - b), [50, 100, 150, 200]);
+  assert.deepEqual(new Set(prizes.filter((x) => x.powerup).map((x) => x.powerup)), new Set(Object.keys(POWERUP_TIME)));
+  assert.ok(prizes.some((x) => x.headstart));
+  assert.equal(listActive((() => { const pu = createPowerups(); activate(pu, 'rocket'); return pu; })())[0].left, POWERUP_TIME.rocket);
 });

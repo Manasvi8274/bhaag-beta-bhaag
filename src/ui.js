@@ -28,9 +28,19 @@ const CSS = `
 #ui .badge { background: #ffd60a; color: #1b1b1b; border: 3px solid #1b1b1b; border-radius: 10px; padding: 0 12px; font-size: 22px;
   animation: bbb-pulse .6s ease-in-out infinite alternate; }
 #ui .hud { position: absolute; inset: 0; pointer-events: none; padding: ${SAFE}; }
-#ui .pus { display: flex; flex-direction: column; gap: 6px; padding: 8px 14px; align-items: flex-start; }
 #ui .pu { display: flex; align-items: center; gap: 6px; font-size: 18px; }
-#ui .pu i { display: block; width: 90px; height: 10px; border: 2px solid #1b1b1b; border-radius: 6px; background: #ffd60a; transform-origin: left; }
+#ui .pus { position: absolute; right: calc(env(safe-area-inset-right) + 10px); top: calc(env(safe-area-inset-top) + 64px);
+  display: flex; flex-direction: column; gap: 8px; align-items: flex-end; }
+#ui .put { display: flex; align-items: center; gap: 6px; background: rgba(20,20,40,.6); border: 3px solid #1b1b1b; border-radius: 999px; padding: 3px 10px 3px 3px; }
+#ui .put b { width: 38px; height: 38px; border-radius: 50%; background: #ffd60a; border: 3px solid #1b1b1b; display: grid; place-items: center; font-size: 20px; }
+#ui .put i { display: block; width: 64px; height: 10px; border: 2px solid #1b1b1b; border-radius: 6px; background: #3a3a55; overflow: hidden; }
+#ui .put i u { display: block; height: 100%; background: #7cfc00; transform-origin: left; }
+#ui .put span { font-size: 16px; min-width: 26px; text-align: right; }
+#ui .put.end { animation: bbb-blink .3s steps(2) infinite; } #ui .put.end i u { background: #ff3b30; }
+#ui .hs { position: absolute; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 24%); transform: translateX(-50%); pointer-events: auto;
+  animation: bbb-pulse .5s ease-in-out infinite alternate; }
+#ui .mis { background: rgba(20,20,40,.6); border: 3px solid #1b1b1b; border-radius: 14px; padding: 6px 12px; font-size: 16px; width: min(90vw, 380px); text-align: left; }
+#ui .mis div { display: flex; justify-content: space-between; gap: 8px; }
 #ui .flash { position: absolute; left: 0; right: 0; top: 28%; text-align: center; font-size: 48px; color: #ffd60a; pointer-events: none; opacity: 0; }
 #ui .flash.go { animation: bbb-flash 900ms ease-out forwards; }
 #ui .hint { position: absolute; left: 0; right: 0; bottom: calc(env(safe-area-inset-bottom) + 18%); text-align: center; font-size: 28px; pointer-events: none; opacity: 0; }
@@ -48,6 +58,7 @@ const CSS = `
 #ui .sw { width: 34px; height: 34px; border-radius: 50%; border: 3px solid #1b1b1b; flex: none; }
 @keyframes bbb-flash { 0% { opacity: 0; transform: scale(.6); } 15% { opacity: 1; transform: scale(1.08); } 30% { transform: scale(1); } 70% { opacity: 1; } 100% { opacity: 0; } }
 @keyframes bbb-hint { 0% { opacity: 0; } 10% { opacity: 1; } 80% { opacity: 1; } 100% { opacity: 0; } }
+@keyframes bbb-blink { to { opacity: .35; } }
 @keyframes bbb-pulse { from { transform: rotate(4deg); } to { transform: rotate(-4deg) scale(1.08); } }
 `;
 
@@ -65,7 +76,7 @@ function btn(parent, text, cls, onClick) {
 }
 const hex = (n) => '#' + n.toString(16).padStart(6, '0');
 const CHAR_ICON = { beta: '👦', beti: '👧', papa: '👨', mummy: '👩', dadi: '👵' };
-const PU_ICON = { shield: '🛡️', magnet: '🟠', jump: '🥛', double: '✖2', cycle: '🚲' };
+const PU_ICON = { shield: '🛡️', magnet: '🟠', jump: '🥛', double: '✖2', cycle: '🚲', rocket: '🚀', score2x: '⭐' };
 
 export function createUI(root, h) {
   if (!document.getElementById('bbb-ui-style')) {
@@ -103,10 +114,12 @@ export function createUI(root, h) {
   const coins = el('div', 'pill o', '🪙 0', hBar);
   btn(hBar, '⏸', 'icon alt', () => h.onPause());
   const pus = el('div', 'pus', null, hud);
+  const hsBtn = btn(hud, '', 'gold hs hidden', () => h.onHeadstart());
 
   // Pause
   const pause = el('div', 'screen hidden', null, root);
   el('h1', 'title o', 'Ruko Zara!', pause);
+  const pMissions = el('div', 'mis o', null, pause);
   btn(pause, '▶ Resume', 'big', () => h.onResume());
   const pSound = btn(pause, '🔊 Sound', 'alt', () => h.onSound());
   const pVibe = btn(pause, '📳 Vibration', 'alt', () => h.onVibrate());
@@ -163,14 +176,28 @@ export function createUI(root, h) {
       if (mult > 1) el('small', null, `x${mult}`, score);
       coins.textContent = `🪙 ${c}`;
     },
+    // Subway-Surfers-style timers on the right: icon, draining bar, seconds left; blinks red in the last 3 seconds.
     setPowerups(list) {
-      if (pus.childElementCount !== list.length) {
+      const key = list.map((p) => p.name).join();
+      if (pus.dataset.key !== key) {
+        pus.dataset.key = key;
         pus.replaceChildren();
-        for (const p of list) { const r = el('div', 'pu o', PU_ICON[p.name], pus); el('i', null, null, r); }
+        for (const p of list) { const r = el('div', 'put o', null, pus); el('b', null, PU_ICON[p.name], r); el('u', null, null, el('i', null, null, r)); el('span', null, '', r); }
       }
-      list.forEach((p, i) => { pus.children[i].lastChild.style.transform = `scaleX(${Math.max(0, p.frac)})`; });
+      list.forEach((p, i) => {
+        const r = pus.children[i];
+        r.children[1].firstChild.style.transform = `scaleX(${Math.max(0, p.frac)})`;
+        r.lastChild.textContent = `${Math.ceil(p.left)}s`;
+        r.classList.toggle('end', p.left <= 3);
+      });
     },
-    showPause() { only(pause); },
+    setHeadstart(n) { hsBtn.classList.toggle('hidden', !n); hsBtn.textContent = `🚀 Rocket Start ×${n}`; },
+    showPause(missions = []) {
+      pMissions.replaceChildren();
+      el('div', null, '🎯 Missions', pMissions);
+      for (const m of missions) { const r = el('div', null, null, pMissions); el('span', null, `${m.have >= m.goal ? '✔' : '•'} ${m.text}`, r); el('span', null, `${m.have}/${m.goal}`, r); }
+      only(pause);
+    },
     setAdLoading(on) { adBtn.disabled = on; revive.disabled = on || !revive.dataset.afford; adBtn.textContent = on ? '📺 Loading ad...' : '📺 Watch ad to escape'; },
     setSettings({ muted, vibrate, voice, voiceAvailable }) {
       pVoice.classList.toggle('hidden', !voiceAvailable);
@@ -197,7 +224,7 @@ export function createUI(root, h) {
       only(over);
     },
     setCharacters(heroName, chaserLine) { titleHero.textContent = `Bhaag ${heroName}`; tagline.textContent = chaserLine; },
-    showShop(skins, data, upgrades = [], chars = null) {
+    showShop(skins, data, upgrades = [], chars = null, headstartCost = 0) {
       openPanel('Beta Ki Dukaan', (p) => {
         el('div', null, `🪙 ${data.coins}`, p).style.fontSize = '20px';
         if (chars) for (const [kind, heading] of [['hero', 'Kaun bhaagega?'], ['chaser', 'Peeche kaun?']]) {
@@ -220,6 +247,14 @@ export function createUI(root, h) {
           if (data.skin === id) el('div', null, '✔ Wearing', r);
           else if (data.owned.includes(id)) btn(r, 'Wear', 'ok', () => h.onSkin(id));
           else btn(r, `🪙 ${s.price}`, 'gold', () => h.onSkin(id)).disabled = data.coins < s.price;
+        }
+        if (headstartCost) {
+          el('h3', null, 'Rocket Start', p);
+          const r = el('div', 'item', null, p);
+          el('div', 'pu', '🚀', r);
+          const info = el('div', 'grow', 'Fly from the start of a run', r);
+          el('small', null, `You have ${data.headstarts}`, info);
+          btn(r, `🪙 ${headstartCost}`, 'gold', () => h.onBuyHeadstart()).disabled = data.coins < headstartCost;
         }
         el('h3', null, 'Power-up Upgrades', p);
         for (const u of upgrades) {
