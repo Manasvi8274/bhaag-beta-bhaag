@@ -20,11 +20,16 @@ An endless runner through Indian streets, starring stickmen. It runs in the brow
 - **Power-ups:** Mummy's Shield, Dadi's Ladoo Magnet, Doodh Power Jump, Double Coins, Bhaiya Ki Cycle (ride and smash through everything), Diwali Rocket (fly above the street over a trail of sky coins) and Score Dugna (double score). Each can be upgraded in the shop, and its timer shows on the right while it lasts.
 - **Mystery Dabba:** a gift box with coins, a power-up or a Rocket Start inside. Buy Rocket Starts in the shop and launch one in the first seconds of a run.
 - **Speed Up levels:** the game gets faster each time your score passes a threshold.
+- **Play with others:**
+  - **Muqabla (live race):** Quick Match pairs you with whoever else is looking; or make a room and give friends the 4-letter code (a WhatsApp invite link fills it in). Up to 4 players run the same street at the same time and see each other as ghosts. Whoever runs furthest wins. No revives, rocket starts or shop upgrades in a race. If nobody is online you race a clearly labelled bot.
+  - **Challenge a friend:** every share carries a link (`?c=…`) to the exact street you ran, with your distance as a checkered line across the road. Your friend plays it in the browser with no install, and can send the challenge back.
 - **Things to come back for:**
   - Missions (progress in the pause menu); every 3 done raises your score multiplier and pays a bonus.
-  - 11 badges and your lifetime records.
+  - 12 badges and your lifetime records.
   - A daily login reward.
-  - **Aaj ka Challenge:** a seeded street that's the same for everyone that day, with the ghost of your best try to race.
+  - **Aaj ka Challenge:** a seeded street that's the same for everyone that day, with the ghost of your best try to race. Its share text is a numbered result bar.
+  - **Shabd Hunt:** collect the letters of the day's word (CHAPPAL, JALEBI…) across your runs for coins and a Rocket Start; the reward grows with a streak of days.
+  - A checkered line on the road at your record distance.
   - "Bal bal bache!" bonus coins for last-moment dodges.
   - A share card of the moment you got caught.
 
@@ -55,8 +60,9 @@ npm test                        # node:test, no dependencies
 | `src/progress.js` | The save game: coins, shop, missions, badges, records, daily reward, daily challenge. |
 | `src/ui.js` | DOM overlay. Text is set via `textContent` only. |
 | `src/audio.js` | All sound is synthesised with Web Audio: dhol + tumbi music, horns, the train, thunder. No audio files. |
-| `src/ads.js` | Optional rewarded ads: AdMob on Android, H5 Games Ads on the web (off until AdSense approves the site). |
-| `src/share.js` | The score card and the share sheet. |
+| `src/ads.js` | Optional rewarded ads (escape Papa, 2× coins): AdMob on Android, H5 Games Ads on the web (off until AdSense approves the site). |
+| `src/share.js` | The score card, the share text, and friend-challenge links (made and parsed here). |
+| `src/net.js` | Live races: a ~40-line MQTT client over WebSocket plus the room and matchmaking rules. It uses free public brokers (`BROKERS`), so there is no server to run. They have no uptime promise and no auth; point `BROKERS` at a broker of your own when players grow. |
 | `src/voice.js` | Hindi text-to-speech shouts (silent where the phone has no Hindi voice). |
 | `src/ghost.js` | Records and replays the daily-challenge ghost. |
 | `src/festival.js` | Festival dates (Diwali week). |
@@ -74,3 +80,5 @@ Every push to `master` triggers CI (`.github/workflows/deploy.yml`):
 3. Build the Android APK/AAB into the `latest` GitHub release.
 
 Play Store text and release notes are in `store/LISTING.md`. Android is a Capacitor 7 shell; `npm run android` builds `www/` and opens Android Studio.
+
+When the app is public on Google Play (production, not closed testing), set `STORE_LIVE = true` in `src/config.js`: the web game's Install button then sends players to the Play Store page.

@@ -1,11 +1,11 @@
 import * as THREE from '../vendor/three.module.js';
-import { SPEED_START, SPEED_MAX, SPEED_RAMP, LANES, VERSION, CHASER_FAR, speedLevel, speedFor } from './config.js';
+import { SPEED_START, SPEED_MAX, SPEED_RAMP, LANES, VERSION, CHASER_FAR, speedLevel, speedFor, STORE_ID, STORE_LIVE } from './config.js';
 import { createPlayer, applyAction, updatePlayer, getHitbox } from './player.js';
 import { aabbOverlap, firstHit, groundAt } from './collision.js';
 import { createSpawner, spawnUntil } from './spawner.js';
 import { createChaser, stumble, chappalHit, catchNow, updateChaser, throwDue, angryThrowDue, startChase, chaseActive } from './chaser.js';
 import { createStickman, HEROES, CHASERS, SPANK_PERIOD } from './stickman.js';
-import { createProp, setPropsNight, addHeadlights, PROP_NAMES, buildBicycle } from './props.js';
+import { createProp, createLetter, setPropsNight, addHeadlights, PROP_NAMES, buildBicycle } from './props.js';
 import { createWorld, lampForLight, LAMP_HEAD_Y } from './world.js';
 import { createSky, createRain, createCrows } from './sky.js';
 import { skyAt, menuTime, mix, rainAt, rainStartFor } from './daynight.js';
@@ -15,10 +15,11 @@ import { createUI } from './ui.js';
 import { createAudio } from './audio.js';
 import { createFx, createSpeedLines } from './fx.js';
 import { createAds, createWebAds } from './ads.js';
-import { drawCard, shareRun } from './share.js';
+import { drawCard, shareRun, shareText, whatsappUrl, parseChallenge, cleanName, GAME_URL } from './share.js';
+import { createNet, cleanCode, MAX_RIVALS } from './net.js';
 import { createVoice } from './voice.js';
 import { festivalOn } from './festival.js';
-import { createRecorder, record, ghostAt, ghostDistance } from './ghost.js';
+import { createRecorder, record, ghostAt, ghostDistance, MODES } from './ghost.js';
 import { createProgress, HEADSTART_COST, SKINS, CHARACTERS, dailyChallenge, ACHIEVEMENTS } from './progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive, POWERUP_LABEL, POWERUP_TIME, HEADSTART_TIME, mysteryPrize } from './powerups.js';
 
@@ -49,6 +50,10 @@ const MILESTONE = 500;
 const FIREWORKS = [0xff3b3b, 0xffd60a, 0x3aff7a, 0x3a86ff, 0xff70ff, 0xffffff];
 const pick = (a) => a[Math.floor(Math.random() * a.length)];
 const NEWS = [
+  ['⚔️', 'Muqabla: race live! Quick Match with anyone, or make a room and send the code to your friends'],
+  ['📲', 'Challenge a friend on WhatsApp: they run your exact street and try to cross your line'],
+  ['🔤', "Shabd Hunt: collect the letters of the day's word for coins and a Rocket Start"],
+  ['🏁', 'A checkered line on the road marks your record. Cross it!'],
   ['🚀', 'Diwali Rocket: fly over the street and grab the coins in the sky! Buy a Rocket Start in the shop'],
   ['🎁', 'Mystery Dabba: coins, a power-up or a free Rocket Start inside'],
   ['⭐', 'Score Dugna doubles your score; power-up timers now show on the right'],
@@ -65,6 +70,8 @@ const NEWS = [
   ['😡', 'After 1 km Papa throws his chappal from afar. Dodge close for "Bal bal bache!" coins'],
 ];
 const ROCKET_Y = 7.4, HEADSTART_WINDOW = 6; // flying height (above the street wires); seconds the Rocket Start button stays up
+const BEST_MARK_FROM = 200; // the record line shows once there is a record worth chasing
+const LETTER_FIRST = 100, LETTER_GAP = 200; // Shabd Hunt: metres before the first letter, and after each one (a word is 1 to 1.5 km of running)
 const HINTS = [[0.8, '👈 Swipe left / right 👉'], [4.5, '👆 Swipe up to jump'], [8, '👇 Swipe down to slide']];
 
 const ease = (cur, target, rate, dt) => cur + (target - cur) * Math.min(1, dt * rate);
@@ -100,7 +107,8 @@ export function startGame(canvas, uiRoot) {
   const chasers = Object.fromEntries(CHASERS.map((t) => [t, createStickman(t)]));
   let beta = heroes.beta, papa = chasers.papa;
   const ghosts = Object.fromEntries(HEROES.map((t) => [t, createStickman(t, { ghost: true })])); // daily-challenge ghost
-  for (const g of Object.values(ghosts)) { g.group.visible = false; scene.add(g.group); }
+  const rivalGhosts = Array.from({ length: MAX_RIVALS }, () => createStickman('beta', { ghost: true })); // the others in a live race
+  for (const g of [...Object.values(ghosts), ...rivalGhosts]) { g.group.visible = false; scene.add(g.group); }
   const bubble = new THREE.Mesh(new THREE.SphereGeometry(1.15, 20, 14),
     new THREE.MeshStandardMaterial({ color: 0xff70a6, emissive: 0xff70a6, emissiveIntensity: 0.4, transparent: true, opacity: 0.22, depthWrite: false }));
   bubble.position.y = 0.95;
@@ -148,14 +156,21 @@ export function startGame(canvas, uiRoot) {
   }
 
   let state = 'menu', run = null, shake = 0, baseFov = 62;
+  const friendLink = parseChallenge(location.search); // the game was opened from a friend's challenge link
+  let net = null; // the live room, while in Muqabla
+  // In the app a top-level navigation to another site is handed to Android (WhatsApp, the Play Store); on the web it is a new tab.
+  const openExternal = (url) => { if (window.Capacitor) location.href = url; else window.open(url, '_blank', 'noopener'); };
+  const showInstall = () => ui.setInstallable(!window.Capacitor && (STORE_LIVE || !!window.bbbInstall), STORE_LIVE ? '📲 Get the app' : '📲 Install');
   const vibrate = (ms) => { if (progress.data.vibrate) try { navigator.vibrate?.(ms); } catch { /* unsupported */ } };
   const unlock = () => audio.unlock();
   window.addEventListener('pointerdown', unlock, { capture: true });
   window.addEventListener('keydown', unlock, { capture: true });
 
   const ui = createUI(uiRoot, {
-    onStart: () => begin(false), onRestart: () => begin(run?.daily), onChallenge: () => begin(true), onPause: pauseGame, onResume: resume, onRevive: () => revive(false), onWatchAd: watchAd,
-    onHome() { if (state === 'paused') finishRun(); goMenu(); },
+    onStart: () => begin(), onRestart: () => begin(run?.mode), onChallenge: () => begin({ daily: true }), onFriend: () => begin({ friend: friendLink }),
+    onPause: pauseGame, onResume: resume, onRevive: () => revive(false), onWatchAd: watchAd, onDoubleCoins: doubleCoins,
+    onWhatsApp, onVersus: () => openVersus(), onRematch: rematch,
+    onHome() { if (state === 'paused') finishRun(); leaveNet(); goMenu(); },
     onMissions: () => ui.showMissions(progress.data.missions, progress.multiplier(), progress.data, ACHIEVEMENTS),
     onSound() { progress.setSetting('muted', !progress.data.muted); audio.setMuted(progress.data.muted); ui.setSettings(settings()); },
     onVoice() { progress.setSetting('voice', !progress.data.voice); ui.setSettings(settings()); },
@@ -181,6 +196,7 @@ export function startGame(canvas, uiRoot) {
     },
     onShare,
     async onInstall() {
+      if (STORE_LIVE) { openExternal(`https://play.google.com/store/apps/details?id=${STORE_ID}`); return; }
       const e = window.bbbInstall;
       if (!e) return;
       window.bbbInstall = null;
@@ -192,34 +208,62 @@ export function startGame(canvas, uiRoot) {
   });
   ui.setSettings(settings());
   applyCharacters();
-  ui.setInstallable(!!window.bbbInstall);
-  window.addEventListener('bbb-install', () => ui.setInstallable(true));
-  window.addEventListener('appinstalled', () => ui.setInstallable(false));
+  showInstall();
+  window.addEventListener('bbb-install', showInstall);
+  window.addEventListener('appinstalled', () => { window.bbbInstall = null; showInstall(); });
   const shop = () => ui.showShop(SKINS, progress.data, upgradeList(), CHARACTERS, HEADSTART_COST);
   const upgradeList = () => Object.keys(POWERUP_TIME).map((name) => ({
     name, label: POWERUP_LABEL[name], level: progress.upgradeLevel(name), cost: progress.upgradeCost(name), secs: progress.powerupTime(name),
   }));
 
   function clearItems() {
-    if (run) for (const it of run.items) scene.remove(it.mesh);
+    if (run) for (const it of [...run.items, ...run.marks]) scene.remove(it.mesh);
     fx.clear();
     world.reset();
     crows.reset();
   }
 
+  // A checkered line across the road at d metres: your record, a friend's run, or where a rival got caught.
+  function addMark(d, cheer, friend = null) {
+    const mesh = createProp('finish');
+    mesh.position.z = -d;
+    scene.add(mesh);
+    run.marks.push({ d, cheer, friend, mesh });
+  }
+  function passMarks() {
+    for (const m of run.marks) {
+      if (m.passed || -run.z < m.d) continue;
+      m.passed = true;
+      ui.flash(m.cheer);
+      audio.play('powerup');
+      audio.play('firework');
+      vibrate(60);
+      for (let i = 0; i < 4; i++) fx.burst(run.p.x + (i - 1.5) * 1.6, 2.5 + (i % 2), run.z - 4, FIREWORKS[i], 18, { speed: 5, up: 4, life: 0.9, gravity: -4, scale: 1.6 });
+      if (!m.friend) continue;
+      run.beat = m.friend;
+      run.stats.friend = 1;
+      const paid = progress.beatFriend(`${m.friend.seed}-${m.friend.distance}`);
+      if (paid) ui.toast(`⚔️ ${m.friend.name} haar gaya! +${paid} 🪙`);
+    }
+  }
+
   // daily: today's challenge street (seeded: the same obstacles, rain and all, for everyone today).
-  function begin(daily = false) {
+  // friend: a challenge link's street and line to beat. race: a live race (seed from the room), or against the bot.
+  function begin({ daily = false, friend = null, race = false, bot = false, seed } = {}) {
     clearItems();
     const ch = dailyChallenge(today());
-    const seed = daily ? ch.seed : (Math.random() * 1e9) | 0;
+    seed ??= friend ? friend.seed : daily ? ch.seed : (Math.random() * 1e9) | 0;
     run = {
+      mode: { daily, friend }, seed, friend, race, marks: [], beat: null, doubled: 0, nextLetter: LETTER_FIRST, letterOut: null, result: null, end: null, pose: 'run',
+      // The practice rival when nobody is online: runs to a distance near your own record, then gets caught.
+      bot: bot ? { name: '🤖 Bablu', d: 0, over: false, target: Math.max(250, progress.data.bestDistance * (0.4 + Math.random() * 0.6)) } : null,
       p: createPlayer(), z: 0, speed: SPEED_START, prevLane: 1, t: 0, hint: 0, daily, goal: ch.goal, goalHit: false,
       rec: daily ? createRecorder() : null, ghost: daily ? progress.ghostFor(today()) : null, ghostBeat: false,
       spawner: createSpawner(seed), chaser: createChaser(), pu: createPowerups(),
       items: [], hitSet: new Set(), coins: 0, committed: 0, score: 0, stumbleT: 0, invuln: 0,
       caughtT: 0, hits: 0, jolt: 0, throwHinted: false, scoreDist: 0, speedLvl: 0, flying: false, skyZ: 0, skyLane: 1, ticks: {}, papaZ: 3, papaX: 0, zone: 0, ground: 0, floorS: 0, pendingThrow: 0, revives: 0, adUsed: false, mult: progress.multiplier(), wasGrounded: true,
-      dodgeT: -9, dodgeFromX: 0, milestone: 0, nextChase: CHASE_EVERY, chasing: false, rainStart: rainStartFor(daily ? (seed % 1000) / 1000 : Math.random()), thunderT: 3, flashT: 0, rained: false,
-      stats: { score: 0, coins: 0, distance: 0, jumps: 0, slides: 0, powerups: 0, dodges: 0, nearMisses: 0, areas: 1, smashes: 0, night: 0, rain: 0 },
+      dodgeT: -9, dodgeFromX: 0, milestone: 0, nextChase: CHASE_EVERY, chasing: false, rainStart: rainStartFor(((seed >>> 0) % 1000) / 1000), thunderT: 3, flashT: 0, rained: false,
+      stats: { score: 0, coins: 0, distance: 0, jumps: 0, slides: 0, powerups: 0, dodges: 0, nearMisses: 0, areas: 1, smashes: 0, night: 0, rain: 0, friend: 0 },
       recorded: null, // stats already added to the lifetime records (a revived run records only what is new)
     };
     if (progress.data.tutorialDone) run.hint = HINTS.length;
@@ -228,9 +272,15 @@ export function startGame(canvas, uiRoot) {
     ui.showHUD();
     ui.setScore(0, 0, run.mult);
     ui.setPowerups([]);
-    ui.setHeadstart(progress.data.headstarts);
+    ui.setHeadstart(race ? 0 : progress.data.headstarts); // a race is on equal terms
+    ui.setTarget('');
     ui.flash('Bhaag!');
-    if (daily) ui.toast(run.ghost ? `👻 Race your best today: ${Math.floor(ghostDistance(run.ghost))} m` : `📅 Aaj ka Challenge: reach ${ch.goal} m!`);
+    if (friend) addMark(friend.distance, `🏆 ${friend.name} ko hara diya!`, friend);
+    else if (!race && progress.data.bestDistance >= BEST_MARK_FROM) addMark(progress.data.bestDistance, '🏆 Naya record!');
+    for (const r of rivals()) Object.assign(r, { marked: false, gd: 0, gx: 0, gy: 0 });
+    if (race) ui.toast(bot ? '🤖 Koi online nahi mila. Bot Bablu se muqabla!' : '⚔️ Muqabla! Sabse door bhaago!');
+    else if (friend) ui.toast(`⚔️ ${friend.name} ran ${friend.distance} m on this street. Cross the line!`);
+    else if (daily) ui.toast(run.ghost ? `👻 Race your best today: ${Math.floor(ghostDistance(run.ghost))} m` : `📅 Aaj ka Challenge: reach ${ch.goal} m!`);
     audio.setZone(0);
     shout(`${progress.data.hero === 'beti' ? 'बेटी' : 'बेटा'}! रुक जा!`);
     audio.startMusic();
@@ -245,6 +295,9 @@ export function startGame(canvas, uiRoot) {
     ui.showMenu({ best: progress.data.best, wallet: progress.data.coins });
     const ch = dailyChallenge(today());
     ui.setChallenge(ch.goal, ch.reward, progress.data.challengeDone === today());
+    ui.setFriend(friendLink ? `⚔️ Beat ${friendLink.name}: ${friendLink.distance} m` : '');
+    const h = progress.huntStatus(today());
+    ui.setHunt(h.done ? `🔤 ${h.word} ✔ · kal naya shabd` : `🔤 Aaj ka shabd: ${huntText(h)}`);
   }
 
   function pauseGame() {
@@ -282,7 +335,7 @@ export function startGame(canvas, uiRoot) {
   const reviveCost = () => 100 * 2 ** run.revives;
 
   function revive(free) {
-    if (state !== 'over') return;
+    if (state !== 'over' || run.race) return;
     if (!free) {
       if (!progress.spend(reviveCost())) return;
       run.revives += 1;
@@ -309,31 +362,121 @@ export function startGame(canvas, uiRoot) {
 
   // One rewarded-ad escape per run (keeps ads optional and rare).
   let adBusy = false;
-  async function watchAd() {
-    if (state !== 'over' || run.adUsed || adBusy) return;
+  async function rewarded() { // resolves true if the player watched a rewarded ad to the end
+    if (adBusy) return false;
     adBusy = true;
     ui.setAdLoading(true);
     audio.setMuted(true); // ads play their own sound
     const earned = await ads.showRewarded();
     audio.setMuted(progress.data.muted);
     adBusy = false;
-    if (earned && state === 'over') { run.adUsed = true; revive(true); return; }
     ui.setAdLoading(false);
-    if (state === 'over') ui.toast('Ad not finished or not available - try again');
+    if (!earned && state === 'over') ui.toast('Ad not finished or not available - try again');
+    return earned && state === 'over';
+  }
+  async function watchAd() {
+    if (state !== 'over' || run.adUsed || run.race || !(await rewarded())) return;
+    run.adUsed = true;
+    revive(true);
+  }
+  // Rewarded ad: pays the coins collected this run a second time (after a revive, only what came since).
+  async function doubleCoins() {
+    if (state !== 'over' || run.coins <= run.doubled || !(await rewarded())) return;
+    const n = run.coins - run.doubled;
+    run.doubled = run.coins;
+    progress.addCoins(n);
+    showOver(); // the wallet grew: the revive may be affordable now
+    ui.toast(`🪙 +${n} coins!`);
+    audio.play('powerup');
   }
 
   // Score card from the caught scene itself (chaser mid-spank), then the share sheet.
-  const runInfo = () => ({ distance: run.stats.distance, score: run.score, area: ZONES[run.zone].name, chaser: progress.data.chaser, hero: progress.data.hero });
+  // The link in every share is a challenge: this run's street (seed) with its distance as the line to beat.
+  const runInfo = () => ({ distance: run.stats.distance, score: run.score, area: ZONES[run.zone].name, chaser: progress.data.chaser, hero: progress.data.hero,
+    seed: run.seed, name: progress.data.name, beat: run.beat, daily: run.daily ? { date: today(), goal: run.goal } : null });
+  // Asks for a name once (friends see it on the challenge), then carries on.
+  const withName = (then) => { if (progress.data.name) then(); else ui.askName('', (n) => { progress.setName(cleanName(n)); then(); }); };
   function onShare() {
     if (state !== 'over') return;
-    const info = runInfo(), card = document.createElement('canvas');
-    renderer.render(scene, camera); // read right after drawing: the WebGL buffer is still valid
-    drawCard(card.getContext('2d'), renderer.domElement, info);
-    card.toBlob(async (blob) => {
-      const r = await shareRun(blob, info);
-      if (r === 'copied') ui.toast('Copied! Paste it to your friends 📋');
-      else if (r === 'failed') ui.toast('Could not share on this device');
-    }, 'image/png');
+    withName(() => {
+      const info = runInfo(), card = document.createElement('canvas');
+      renderer.render(scene, camera); // read right after drawing: the WebGL buffer is still valid
+      drawCard(card.getContext('2d'), renderer.domElement, info);
+      card.toBlob(async (blob) => {
+        const r = await shareRun(blob, info);
+        if (r === 'copied') ui.toast('Copied! Paste it to your friends 📋');
+        else if (r === 'failed') ui.toast('Could not share on this device');
+      }, 'image/png');
+    });
+  }
+  function onWhatsApp() { if (state === 'over') withName(() => openExternal(whatsappUrl(shareText(runInfo())))); }
+
+  // --- Muqabla: a live race against the room, or against the practice bot when nobody is online ---
+  const rivals = () => (run?.bot ? [run.bot] : net ? net.rivals() : []);
+  const myName = () => progress.data.name || 'Dost';
+  function leaveNet() { net?.leave(); net = null; }
+  function connect(name) {
+    progress.setName(cleanName(name));
+    leaveNet();
+    net = createNet({ name: myName(), on: {
+      room: showRoom,
+      go: (seed) => begin({ race: true, seed }),
+      noMatch() { leaveNet(); begin({ race: true, bot: true }); },
+      down() {
+        if (run?.race && state !== 'menu') { run.offline = true; ui.toast('📡 Connection toot gaya'); return; } // rivals' last known distances stand
+        leaveNet();
+        goMenu();
+        ui.toast('📡 Connect nahi hua. Internet check karo.');
+      },
+    } });
+    return net;
+  }
+  function showRoom() {
+    if (!net || state !== 'menu') return;
+    const r = net.room();
+    ui.showRoom(r ? { ...r, me: myName() } : { seeking: true }, {
+      onStart: () => net?.start(),
+      onInvite: () => openExternal(whatsappUrl(`Bhaag Beta Bhaag mein muqabla! 🏃🩴 Room ${r.code} join karo: ${GAME_URL}?room=${r.code}`)),
+      onLeave: leaveNet,
+    });
+  }
+  function openVersus(code = '') {
+    ui.showVersus(progress.data.name, code, {
+      onQuick(name) { connect(name).quick(); showRoom(); },
+      onHost(name) { connect(name).host(); },
+      onJoin(name, c) { if (cleanCode(c)) connect(name).join(cleanCode(c)); else ui.toast('Room code 4 letters ka hota hai'); },
+    });
+  }
+  function rematch() {
+    if (state !== 'over' || !run.race) return;
+    if (run.bot) { begin({ race: true, bot: true }); return; }
+    if (!net || run.offline) { leaveNet(); goMenu(); return; }
+    net.lobby(); // back to the room: the host starts the next one
+    goMenu();
+    showRoom();
+  }
+  // Runs every frame of a race (also after I am caught): tells the room where I am, shows the gaps, settles the result.
+  function updateRace(dt) {
+    const me = -run.z, playing = state === 'playing', rs = rivals();
+    if (run.bot && !run.bot.over) { run.bot.d = Math.min(run.bot.target, run.bot.d + run.speed * 0.97 * dt); run.bot.over = run.bot.d >= run.bot.target; }
+    net?.state({ d: Math.round(me * 10) / 10, x: Math.round(run.p.x * 100) / 100, y: Math.round(run.p.y * 100) / 100, m: Math.max(0, MODES.indexOf(run.pose)), over: !playing });
+    for (const r of rs) {
+      if (!r.over || r.marked) continue;
+      r.marked = true;
+      if (!playing) continue;
+      ui.toast(`🩴 ${r.name} pakda gaya: ${Math.floor(r.d)} m`);
+      if (r.d > me) addMark(r.d, `🏆 ${r.name} se aage!`);
+    }
+    if (playing) ui.setTarget(rs.map((r) => `${r.over ? '🩴' : '🏃'} ${r.name} ${r.d > me ? '▲' : '▼'} ${Math.abs(Math.round(r.d - me))} m`).join('\n'));
+    if (state !== 'over' || run.result) return;
+    const behind = rs.filter((r) => !r.over && r.d <= me); // still running behind me: they could yet pass
+    if (behind.length) { ui.setRace(`⏳ ${behind.map((r) => `${r.name} ${Math.floor(r.d)} m`).join(', ')}: abhi bhaag raha hai...`, false); return; }
+    const ahead = rs.filter((r) => r.d > me).sort((a, b) => b.d - a.d);
+    if (!rs.length) run.result = 'Sab chale gaye!';
+    else if (ahead.length) run.result = `😅 #${ahead.length + 1} of ${rs.length + 1} · ${ahead[0].name}: ${Math.floor(ahead[0].d)} m`;
+    else run.result = `🥇 Jeet gaye! +${progress.raceWon(!run.bot)} 🪙`;
+    ui.setRace(run.result, true);
+    audio.play(ahead.length ? 'stumble' : 'powerup');
   }
 
   function enterCaught() {
@@ -372,17 +515,39 @@ export function startGame(canvas, uiRoot) {
 
   function spawnItems() {
     for (const item of spawnUntil(run.spawner, run.z)) {
-      const mesh = addHeadlights(createProp(item.type === 'obstacle' ? item.name : item.type === 'coin' ? 'coin' : item.name), item.name);
+      // Shabd Hunt: when a letter is due it takes the place of a coin in a ground-level line (always in a lane you can run).
+      if (item.type === 'coin' && item.y === 0.8 && !run.race && !run.letterOut && -item.z >= run.nextLetter) {
+        const h = progress.huntStatus(today());
+        if (!h.done) { Object.assign(item, { type: 'powerup', name: 'letter', letter: h.word[h.got], w: 0.8, h: 0.8, d: 0.8 }); run.letterOut = item; }
+      }
+      const mesh = item.name === 'letter' ? createLetter(item.letter) : addHeadlights(createProp(item.type === 'coin' ? 'coin' : item.name), item.name);
       mesh.position.set(item.x, item.type === 'coin' ? item.y - 0.3 : item.type === 'powerup' ? item.y - 0.4 : 0, item.z);
       scene.add(mesh);
       run.items.push({ item, mesh });
     }
   }
 
+  // Shabd Hunt: one letter is on the road at a time; the next comes LETTER_GAP after it is taken or missed.
+  const huntText = (h) => [...h.word].map((c, i) => (i < h.got ? c : '·')).join(' ');
+  const letterGone = () => { run.letterOut = null; run.nextLetter = -run.z + LETTER_GAP; };
+  function collectLetter() {
+    letterGone();
+    const h = progress.huntLetter(today());
+    if (!h) return;
+    if (!h.reward) { ui.toast(`🔤 ${huntText(h)}`); return; }
+    ui.flash(`🎉 ${h.word}!`);
+    ui.toast(`Shabd poora! +${h.reward} 🪙 +1 🚀`);
+  }
+  const puTime = (name) => (run.race ? POWERUP_TIME[name] : progress.powerupTime(name)); // a race is on equal terms: no shop upgrades
+
   function collect(box) {
     const magnet = isActive(run.pu, 'magnet');
     run.items = run.items.filter(({ item, mesh }) => {
-      if (item.z - item.d / 2 > run.z + 10 || (item.name === 'chappal' && item.z < run.z - 40)) { scene.remove(mesh); return false; } // behind camera, or a missed chappal
+      if (item.z - item.d / 2 > run.z + 10 || (item.name === 'chappal' && item.z < run.z - 40)) { // behind camera, or a missed chappal
+        scene.remove(mesh);
+        if (item === run.letterOut) letterGone();
+        return false;
+      }
       if (item.type === 'obstacle' || item.type === 'ramp') return true;
       if (magnet && item.type === 'coin' && item.z > run.z - 16 && item.z < run.z + 1) {
         item.x = ease(item.x, box.x, 10, run.dt);
@@ -403,9 +568,10 @@ export function startGame(canvas, uiRoot) {
       } else {
         run.stats.powerups += 1;
         fx.burst(item.x, item.y + 0.4, item.z, 0xff70a6, 16, { speed: 4, up: 4 });
-        if (item.name === 'dabba') openDabba();
+        if (item.name === 'letter') collectLetter();
+        else if (item.name === 'dabba') openDabba();
         else {
-          activate(run.pu, item.name, progress.powerupTime(item.name));
+          activate(run.pu, item.name, puTime(item.name));
           ui.toast(POWERUP_LABEL[item.name] + '!');
         }
         audio.play(item.name === 'cycle' ? 'tring' : 'powerup');
@@ -417,13 +583,13 @@ export function startGame(canvas, uiRoot) {
   function openDabba() {
     const prize = mysteryPrize(Math.random());
     if (prize.coins) { run.coins += prize.coins; run.stats.coins += prize.coins; ui.toast(`🎁 Mystery Dabba: +${prize.coins} 🪙`); }
-    else if (prize.powerup) { activate(run.pu, prize.powerup, progress.powerupTime(prize.powerup)); ui.toast(`🎁 Mystery Dabba: ${POWERUP_LABEL[prize.powerup]}!`); }
+    else if (prize.powerup) { activate(run.pu, prize.powerup, puTime(prize.powerup)); ui.toast(`🎁 Mystery Dabba: ${POWERUP_LABEL[prize.powerup]}!`); }
     else { progress.addHeadstart(1); ui.toast('🎁 Mystery Dabba: a free 🚀 Rocket Start!'); }
   }
 
   // Rocket Start: during the first seconds of a run, the button launches the rocket for longer.
   function useHeadstart() {
-    if (state !== 'playing' || run.t > HEADSTART_WINDOW || !progress.useHeadstart()) return;
+    if (state !== 'playing' || run.race || run.t > HEADSTART_WINDOW || !progress.useHeadstart()) return;
     activate(run.pu, 'rocket', HEADSTART_TIME);
     ui.setHeadstart(0);
     ui.flash('🚀 Rocket Start!');
@@ -603,6 +769,8 @@ export function startGame(canvas, uiRoot) {
     updateCycleChase();
     if (run.daily && !run.goalHit && -run.z >= run.goal) { run.goalHit = true; ui.flash('🎉 Challenge done!'); audio.play('powerup'); }
     if (-run.z >= (run.milestone + 1) * MILESTONE) { run.milestone += 1; ui.toast(`🏁 ${run.milestone * MILESTONE} m! Shabash!`); }
+    passMarks();
+    if (run.friend) ui.setTarget(run.beat ? `🏆 ${run.friend.name} haar gaya!` : `⚔️ ${run.friend.name}: ${Math.ceil(run.friend.distance + run.z)} m to go`);
     audio.setTempo((run.speed - SPEED_START) / (SPEED_MAX - SPEED_START));
     if (run.hint < HINTS.length && run.t >= HINTS[run.hint][0]) ui.hint(HINTS[run.hint++][1]);
     const lvl = speedLevel(run.score / run.mult);
@@ -653,6 +821,7 @@ export function startGame(canvas, uiRoot) {
     const glance = run.chaser.distance < CHASER_FAR && Math.sin(run.t * 1.7) > 0.85; // Papa is close: look back now and then
     const pose = run.riding ? 'ride' : run.flying ? 'jump' : run.stumbleT > 0 ? 'stumble' : !p.grounded ? 'jump' : p.sliding ? 'slide' : glance ? 'look' : 'run';
     beta.setMode(pose);
+    run.pose = pose;
     if (run.rec) record(run.rec, run.t, p.x, p.y, -run.z, pose);
     if (run.ghost && !run.ghostBeat && -run.z > ghostDistance(run.ghost)) { run.ghostBeat = true; ui.toast('👻 You beat your best challenge run!'); audio.play('powerup'); }
     papa.setMode(run.chasing ? 'ride' : 'run');
@@ -681,13 +850,22 @@ export function startGame(canvas, uiRoot) {
       if (n === 3) shout('और भागेगा?');
     }
     if (run.caughtT > CAUGHT_SCENE_TIME) {
-      const r = finishRun();
+      run.end = finishRun();
       state = 'over';
-      ui.showGameOver({ score: run.score, coins: run.coins, best: progress.data.best, isNewBest: r.isNewBest,
-        where: `🏁 ${run.stats.distance} m · ${ZONES[run.zone].name}`,
-        completed: r.completed, reviveCost: reviveCost(), wallet: progress.data.coins, adAvailable: ads.available && !run.adUsed,
-        canShare: !!(navigator.share || navigator.clipboard) });
+      showOver();
+      // A happy moment in the app is when to ask for a rating (never mid-race, and not again after a yes).
+      if (!run.race && window.Capacitor && run.end.isNewBest && progress.rateDue()) {
+        ui.showRate(() => { progress.rateAsked(true); openExternal(`market://details?id=${STORE_ID}`); }, () => progress.rateAsked(false));
+      }
     }
+  }
+  function showOver() {
+    const more = run.coins - run.doubled;
+    ui.showGameOver({ score: run.score, coins: run.coins, best: progress.data.best, isNewBest: run.end.isNewBest,
+      where: `🏁 ${run.stats.distance} m · ${ZONES[run.zone].name}`,
+      completed: run.end.completed, reviveCost: reviveCost(), wallet: progress.data.coins, adAvailable: ads.available && !run.adUsed,
+      canShare: !!(navigator.share || navigator.clipboard), doubleCoins: ads.available && more >= 10 ? more : 0, race: run.race });
+    if (run.race) ui.setRace(run.result || '⏳', !!run.result);
   }
 
   // Time of day (+ rain): sky, fog, sun/moon light, streetlights, windows, vehicle lights, wet road.
@@ -753,6 +931,16 @@ export function startGame(canvas, uiRoot) {
     const ghost = ghosts[progress.data.hero], g = state === 'playing' ? ghostAt(run.ghost, run.t) : null;
     for (const x of Object.values(ghosts)) x.group.visible = x === ghost && !!g;
     if (g) { ghost.group.position.set(g.x, g.y, -g.d); ghost.setMode(g.mode); ghost.update(dt, run.speed); }
+    const rs = run.race && !run.bot ? rivals() : []; // news of a rival comes ~3 times a second: run him on at my speed, easing to each update
+    rivalGhosts.forEach((rg, i) => {
+      const r = rs[i];
+      rg.group.visible = !!r && !r.over;
+      if (!rg.group.visible) return;
+      r.gd = ease((r.gd ?? r.d) + run.speed * dt, r.d, 3, dt); r.gx = ease(r.gx ?? r.x, r.x, 10, dt); r.gy = ease(r.gy ?? r.y, r.y, 10, dt);
+      rg.group.position.set(r.gx, r.gy, -r.gd);
+      rg.setMode(MODES[r.m]);
+      rg.update(dt, run.speed);
+    });
     bike.visible = state === 'playing' && run.riding;
     rocketPack.visible = state === 'playing' && run.flying;
     if (rocketPack.visible) rocketPack.position.set(p.x, p.y + 0.75, run.z + 0.22);
@@ -784,7 +972,7 @@ export function startGame(canvas, uiRoot) {
   }
 
   function menuScene(t) {
-    for (const g of Object.values(ghosts)) g.group.visible = false;
+    for (const g of [...Object.values(ghosts), ...rivalGhosts]) g.group.visible = false;
     speedLines.update(0, camera, 0, 0);
     beta.setMode('idle');
     papa.setMode('spank');
@@ -821,7 +1009,8 @@ export function startGame(canvas, uiRoot) {
   App?.addListener('backButton', () => {
     if (state === 'playing') pauseGame();
     else if (state === 'paused') resume();
-    else if (state === 'over') goMenu();
+    else if (state === 'over') { leaveNet(); goMenu(); }
+    else if (state === 'menu' && net) { leaveNet(); goMenu(); } // out of the waiting room first
     else if (state === 'menu') App.exitApp();
   });
 
@@ -831,6 +1020,7 @@ export function startGame(canvas, uiRoot) {
     else if (state !== 'paused') {
       if (state === 'playing') updatePlaying(dt);
       else if (state === 'caught') updateCaught(dt);
+      if (run.race) updateRace(dt);
       placeActors(dt);
     }
     if (state !== 'paused') {
@@ -839,7 +1029,7 @@ export function startGame(canvas, uiRoot) {
       fx.update(dt);
       for (const { item, mesh } of run ? run.items : []) {
         if (item.type === 'coin') mesh.rotation.y += dt * 4;
-        else if (item.type === 'powerup') { mesh.rotation.y += dt * 2; mesh.position.y = item.y - 0.4 + Math.sin(run.t * 4) * 0.1; }
+        else if (item.type === 'powerup') { mesh.rotation.y = item.name === 'letter' ? Math.sin(run.t * 3) * 0.5 : mesh.rotation.y + dt * 2; mesh.position.y = item.y - 0.4 + Math.sin(run.t * 4) * 0.1; }
         else if (item.name === 'dog') mesh.scale.y = 1 + Math.sin(run.t * 2.5) * 0.05; // snoring
       }
     }
@@ -868,6 +1058,7 @@ export function startGame(canvas, uiRoot) {
   const warm = new THREE.Group();
   for (const v of world.variants) warm.add(v.clone());
   for (const name of PROP_NAMES) warm.add(addHeadlights(createProp(name), name));
+  warm.add(createLetter('A'));
   scene.add(warm);
   renderer.compile(scene, camera);
   scene.remove(warm);
@@ -878,7 +1069,9 @@ export function startGame(canvas, uiRoot) {
   const showDaily = () => { if (daily.available) ui.showDaily(daily.streak, daily.reward); };
   let newsSeen = true;
   try { newsSeen = storage?.getItem('bbb-news') === VERSION; storage?.setItem('bbb-news', VERSION); } catch { /* blocked */ }
-  if (!newsSeen && progress.data.tutorialDone) ui.showNews(NEWS, showDaily); // returning players only
+  const roomLink = cleanCode(new URLSearchParams(location.search).get('room')); // a friend's room invite
+  if (roomLink) openVersus(roomLink);
+  else if (!newsSeen && progress.data.tutorialDone) ui.showNews(NEWS, showDaily); // returning players only
   else showDaily();
   renderer.setAnimationLoop(() => {
     const raw = clock.getDelta();
@@ -889,6 +1082,6 @@ export function startGame(canvas, uiRoot) {
   // Dev hooks: #play skips the menu, #debug exposes a stepper for automated checks.
   if (location.hash.includes('play')) begin();
   if (location.hash.includes('debug')) {
-    window.bbb = { frame, onAction, begin, revive, watchAd, setAds: (a) => { ads = a; }, get state() { return state; }, get run() { return run; }, progress, renderer, scene, camera };
+    window.bbb = { frame, onAction, begin, revive, watchAd, doubleCoins, openVersus, ui, setAds: (a) => { ads = a; }, get state() { return state; }, get run() { return run; }, get net() { return net; }, progress, renderer, scene, camera };
   }
 }

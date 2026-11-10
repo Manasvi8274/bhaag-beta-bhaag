@@ -20,6 +20,11 @@ const CSS = `
 #ui button:active { transform: translateY(4px); box-shadow: 0 2px 0 #1b1b1b; }
 #ui button.big { font-size: 30px; padding: 14px 46px; }
 #ui button.alt { background: #3a86ff; } #ui button.ok { background: #2a9d8f; } #ui button.gold { background: #ffbe0b; color: #1b1b1b; }
+#ui button.wa { background: #25d366; color: #1b1b1b; }
+#ui input { font: inherit; font-size: 22px; padding: 6px 12px; border-radius: 14px; border: 4px solid #1b1b1b; width: 100%; min-width: 0; text-align: center;
+  background: #fff; color: #1b1b1b; user-select: text; -webkit-user-select: text; }
+#ui .tgt { position: absolute; left: calc(env(safe-area-inset-left) + 10px); top: calc(env(safe-area-inset-top) + 104px); background: rgba(20,20,40,.6);
+  border: 3px solid #1b1b1b; border-radius: 14px; padding: 2px 12px; font-size: 18px; white-space: pre; text-align: left; }
 #ui button.icon { font-size: 22px; padding: 6px 14px; pointer-events: auto; }
 #ui button:disabled { opacity: .5; }
 #ui .row { display: flex; gap: 10px; align-items: center; justify-content: center; flex-wrap: wrap; margin-bottom: 26px; }
@@ -98,9 +103,12 @@ export function createUI(root, h) {
   el('div', null, 'Bhaag!', title);
   const tagline = el('div', 'sub o', 'Papa is coming with the chappal!', mHead);
   const mBottom = el('div', 'col push', null, menu);
+  const friend = btn(mBottom, '', 'wa hidden', () => h.onFriend()); // a friend's challenge link opened the game
   const challenge = btn(mBottom, '', 'gold', () => h.onChallenge());
-  challenge.style.cssText = 'font-size:17px;padding:8px 18px;';
+  challenge.style.cssText = friend.style.cssText = 'font-size:17px;padding:8px 18px;';
+  const huntEl = el('div', 'sub o', '', mBottom);
   const menuBest = el('div', 'stat o', '', mBottom);
+  btn(mBottom, '⚔️ Muqabla · race live', 'alt', () => h.onVersus()).style.cssText = 'font-size:19px;padding:8px 22px;margin-bottom:6px;';
   el('div', 'ver', `v${VERSION}`, menu);
   const mRow = el('div', 'row', null, mBottom);
   btn(mRow, '🛒', 'icon gold', () => h.onShop());
@@ -114,6 +122,7 @@ export function createUI(root, h) {
   const coins = el('div', 'pill o', '🪙 0', hBar);
   btn(hBar, '⏸', 'icon alt', () => h.onPause());
   const pus = el('div', 'pus', null, hud);
+  const target = el('div', 'tgt o hidden', '', hud); // the line to beat: a friend's distance, or the rivals in a race
   const hsBtn = btn(hud, '', 'gold hs hidden', () => h.onHeadstart());
 
   // Pause
@@ -130,22 +139,30 @@ export function createUI(root, h) {
   const over = el('div', 'screen hidden', null, root);
   el('h1', 'title o', 'Pakde Gaye!', over);
   const oScore = el('div', 'stat o', '', over);
-  const oCoins = el('div', 'stat o', '', over);
-  const oBest = el('div', 'stat o', '', over);
+  const cRow = el('div', 'row', null, over); // the run's coins, with the "2x by ad" offer beside them
+  cRow.style.marginBottom = '0';
+  const oCoins = el('div', 'stat o', '', cRow);
+  const dbl = btn(cRow, '', 'gold hidden', () => h.onDoubleCoins());
+  dbl.style.cssText = 'font-size:17px;padding:4px 14px;';
   const oWhere = el('div', 'sub o', '', over);
   const badge = el('div', 'badge', 'NEW BEST!', over);
   const oMissions = el('div', 'col', null, over);
+  const oRace = el('div', 'stat o hidden', '', over); // a live race: who is still running, then the result
+  const rematch = btn(over, '🔁 Rematch', 'big hidden', () => h.onRematch());
   const revive = btn(over, '', 'ok', () => h.onRevive());
   const adBtn = btn(over, '📺 Watch ad to escape', 'alt', () => h.onWatchAd());
-  btn(over, '↻ Bhaag Again', 'big', () => h.onRestart());
+  const again = btn(over, '↻ Bhaag Again', 'big', () => h.onRestart());
+  const waBtn = btn(over, '⚔️ Challenge a friend', 'wa', () => h.onWhatsApp());
   const oRow = el('div', 'row', null, over);
   const shareBtn = btn(oRow, '📤 Share', 'alt', () => h.onShare());
   btn(oRow, '🏠 Home', 'gold', () => h.onHome());
 
-  // Modal (shop / missions / daily)
+  // Modal (shop / missions / daily / name / room). closeHook runs when the player closes it, not when a screen change hides it.
   const modal = el('div', 'screen hidden', null, root);
   const panel = el('div', 'panel', null, modal);
-  modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.add('hidden'); });
+  let closeHook = null;
+  const closeModal = () => { modal.classList.add('hidden'); const f = closeHook; closeHook = null; f?.(); };
+  modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
   const flashEl = el('div', 'flash o', '', root);
   const hintEl = el('div', 'hint o', '', root);
@@ -153,22 +170,75 @@ export function createUI(root, h) {
   const replay = (e, cls) => { e.classList.remove(cls); void e.offsetWidth; e.classList.add(cls); };
 
   const screens = [menu, hud, pause, over];
-  const only = (shown) => { modal.classList.add('hidden'); for (const s of screens) s.classList.toggle('hidden', s !== shown); };
+  const only = (shown) => { closeHook = null; modal.classList.add('hidden'); for (const s of screens) s.classList.toggle('hidden', s !== shown); };
 
-  function openPanel(titleText, build) {
+  function openPanel(titleText, build, onClose = null, closeText = 'Close') {
     panel.replaceChildren();
     el('h2', null, titleText, panel);
     build(panel);
-    btn(panel, 'Close', 'alt', () => modal.classList.add('hidden')).style.marginTop = '12px';
+    btn(panel, closeText, 'alt', closeModal).style.marginTop = '12px';
+    closeHook = onClose;
     modal.classList.remove('hidden');
   }
+  const field = (parent, value, placeholder, max) => {
+    const i = el('input', null, null, parent);
+    Object.assign(i, { type: 'text', value, placeholder, maxLength: max, autocomplete: 'off', enterKeyHint: 'done' });
+    return i;
+  };
 
   return {
     showMenu({ best, wallet: w }) { menuBest.textContent = `Best: ${Math.floor(best)}`; wallet.textContent = `🪙 ${w}`; only(menu); },
     setChallenge(goal, reward, done) {
       challenge.textContent = done ? `📅 Challenge done ✔ · play again` : `📅 Aaj ka Challenge: ${goal} m · 🪙${reward}`;
     },
-    setInstallable(on) { install.classList.toggle('hidden', !on); },
+    setInstallable(on, label = '📲 Install') { install.classList.toggle('hidden', !on); install.textContent = label; },
+    setFriend(text) { friend.classList.toggle('hidden', !text); friend.textContent = text || ''; },
+    setHunt(text) { huntEl.textContent = text; },
+    setTarget(text) { if (target.textContent !== text) { target.textContent = text; target.classList.toggle('hidden', !text); } },
+    setDouble(n) { dbl.classList.toggle('hidden', !n); dbl.disabled = false; dbl.textContent = `📺 2× coins (+${n} 🪙)`; },
+    setRace(text, done) { oRace.textContent = text; rematch.classList.toggle('hidden', !done); },
+    askName(current, onDone) {
+      openPanel('Tumhara naam?', (p) => {
+        el('div', null, 'Your friends see this name when you challenge them.', p).style.fontSize = '16px';
+        const i = field(p, current, 'Naam', 12);
+        btn(p, 'OK', 'ok', () => { closeHook = null; modal.classList.add('hidden'); onDone(i.value); }).style.marginTop = '10px';
+      });
+      panel.lastChild.remove(); // no way out but OK: the share is waiting on it (an empty name is fine)
+    },
+    showRate(onYes, onLater) {
+      openPanel('Maza aa raha hai?', (p) => {
+        el('div', 'title', '⭐⭐⭐⭐⭐', p).style.cssText = 'font-size:34px;transform:none;';
+        el('div', null, 'A rating helps more people find the game. It takes 10 seconds!', p).style.fontSize = '17px';
+        btn(p, '⭐ Rate karo', 'ok', () => { closeHook = null; modal.classList.add('hidden'); onYes(); }).style.marginTop = '10px';
+      }, onLater, 'Baad mein');
+    },
+    // Muqabla: pick how to find rivals. h2 = { onQuick(name), onHost(name), onJoin(name, code) }.
+    showVersus(name, code, h2) {
+      openPanel('Muqabla ⚔️', (p) => {
+        el('div', null, 'Same gali, same time. Jo sabse door bhaage, woh jeeta!', p).style.fontSize = '16px';
+        const n = field(p, name, 'Tumhara naam', 12);
+        n.style.margin = '8px 0';
+        btn(p, '🎲 Quick Match', 'big', () => h2.onQuick(n.value)).style.fontSize = '24px';
+        el('h3', null, 'Dost ke saath', p);
+        btn(p, '👥 Room banao', 'ok', () => h2.onHost(n.value));
+        const r = el('div', 'item', null, p);
+        const c = field(r, code, 'CODE', 4);
+        c.style.textTransform = 'uppercase';
+        btn(r, 'Join', 'gold', () => h2.onJoin(n.value, c.value));
+        el('div', null, 'Ek hi Wi-Fi par ho? Room banao aur code bata do. (Internet chahiye.)', p).style.fontSize = '14px';
+      });
+    },
+    // The waiting room. r = { seeking } while looking for a random rival, else { code, host, quick, me, players }.
+    showRoom(r, h2) {
+      openPanel(r.seeking ? 'Muqabla ⚔️' : `Room ${r.code}`, (p) => {
+        if (r.seeking) { el('div', 'stat', '🔎 Khiladi dhoondh rahe hain...', p); return; }
+        for (const name of [`${r.me} (you)`, ...r.players]) el('div', 'grow', `🏃 ${name}`, el('div', 'item', null, p));
+        if (!r.players.length) el('div', null, r.quick ? 'Connecting...' : r.host ? 'Share the code. Waiting for friends...' : 'Is room mein abhi koi nahi. Code sahi hai?', p).style.fontSize = '16px';
+        if (r.host) btn(p, '▶ Start race', 'big', () => h2.onStart()).disabled = !r.players.length;
+        else if (r.players.length) el('div', null, 'Host ke start ka intezaar...', p).style.fontSize = '16px';
+        if (!r.quick) btn(p, '🟢 WhatsApp pe bulao', 'wa', () => h2.onInvite()).style.marginTop = '10px';
+      }, h2.onLeave, r.seeking ? 'Cancel' : 'Leave');
+    },
     setWallet(w) { wallet.textContent = `🪙 ${w}`; },
     showHUD() { only(hud); },
     setScore(s, c, mult) {
@@ -198,7 +268,7 @@ export function createUI(root, h) {
       for (const m of missions) { const r = el('div', null, null, pMissions); el('span', null, `${m.have >= m.goal ? '✔' : '•'} ${m.text}`, r); el('span', null, `${m.have}/${m.goal}`, r); }
       only(pause);
     },
-    setAdLoading(on) { adBtn.disabled = on; revive.disabled = on || !revive.dataset.afford; adBtn.textContent = on ? '📺 Loading ad...' : '📺 Watch ad to escape'; },
+    setAdLoading(on) { adBtn.disabled = dbl.disabled = on; revive.disabled = on || !revive.dataset.afford; adBtn.textContent = on ? '📺 Loading ad...' : '📺 Watch ad to escape'; },
     setSettings({ muted, vibrate, voice, voiceAvailable }) {
       pVoice.classList.toggle('hidden', !voiceAvailable);
       pVoice.textContent = `🗣️ Hindi voice ${voice ? 'On' : 'Off'}`;
@@ -206,15 +276,19 @@ export function createUI(root, h) {
       pSound.textContent = `${soundLabel(muted)} Sound ${muted ? 'Off' : 'On'}`;
       pVibe.textContent = `📳 Vibration ${vibrate ? 'On' : 'Off'}`;
     },
-    showGameOver({ score: s, coins: c, best, isNewBest, completed, reviveCost, wallet: w, adAvailable, where = '', canShare = false }) {
+    // race: a live race has no second chances (no revive, no ad, no restart); its result comes through setRace.
+    showGameOver({ score: s, coins: c, best, isNewBest, completed, reviveCost, wallet: w, adAvailable, where = '', canShare = false, doubleCoins = 0, race = false }) {
       oWhere.textContent = where;
       shareBtn.classList.toggle('hidden', !canShare);
-      adBtn.classList.toggle('hidden', !adAvailable);
+      adBtn.classList.toggle('hidden', !adAvailable || race);
+      for (const b of [revive, again, waBtn]) b.classList.toggle('hidden', race);
+      oRace.classList.toggle('hidden', !race);
+      rematch.classList.add('hidden');
+      this.setDouble(race ? 0 : doubleCoins);
       adBtn.disabled = false;
       adBtn.textContent = '📺 Watch ad to escape';
-      oScore.textContent = `Score ${Math.floor(s)}`;
+      oScore.textContent = `Score ${Math.floor(s)} · Best ${Math.floor(best)}`;
       oCoins.textContent = `Coins ${c}`;
-      oBest.textContent = `Best ${Math.floor(best)}`;
       badge.classList.toggle('hidden', !isNewBest);
       oMissions.replaceChildren();
       for (const m of completed) el('div', 'sub o', `✔ ${m.text}  +🪙${m.reward}`, oMissions);
@@ -286,7 +360,7 @@ export function createUI(root, h) {
         el('h3', null, 'Records', p);
         const L = data.life;
         for (const [k, v] of [['Best score', Math.floor(data.best)], ['Longest run', `${data.bestDistance} m`], ['Runs', L.runs],
-          ['Total distance', `${(L.distance / 1000).toFixed(1)} km`], ['Coins collected', L.coins], ['Near misses', L.nearMisses], ['Cycle smashes', L.smashes]]) {
+          ['Total distance', `${(L.distance / 1000).toFixed(1)} km`], ['Coins collected', L.coins], ['Near misses', L.nearMisses], ['Cycle smashes', L.smashes], ['Races won', L.wins]]) {
           const r = el('div', 'item', null, p);
           el('div', 'grow', k, r);
           el('div', null, String(v), r);

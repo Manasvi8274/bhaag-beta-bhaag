@@ -1,5 +1,8 @@
 // All tunable game constants. Units: metres, seconds.
-export const VERSION = '1.2';
+export const VERSION = '1.3';
+// The Play Store page. Flip STORE_LIVE to true once the app is public (production), not while it is in closed testing:
+// the web game then offers "Get the app" instead of the browser install.
+export const STORE_ID = 'com.bhaagbeta.game', STORE_LIVE = false;
 export const LANES = [-2, 0, 2];          // x of each lane centre
 export const LANE_SWITCH_TIME = 0.15;     // seconds to move one lane
 export const GRAVITY = -40;

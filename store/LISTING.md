@@ -2,9 +2,9 @@
 
 **App name (≤30):** Bhaag Beta Bhaag! - Chappal Run
 **Package:** com.bhaagbeta.game
-**Category:** Game → Arcade  **Tags:** Runner, Casual, Offline
-**Content rating (IARC questionnaire):** cartoon/comic slapstick only (a dad waves a slipper; no injury, no blood). Expect *Everyone / PEGI 7* (slapstick).
-**Ads:** Yes (optional rewarded video only — "Watch ad to escape", max once per run)  **In-app purchases:** No  **Price:** Free
+**Category:** Game → Arcade  **Tags:** Runner, Casual, Multiplayer, Offline
+**Content rating (IARC questionnaire):** cartoon/comic slapstick only (a dad waves a slipper; no injury, no blood). Expect *Everyone / PEGI 7* (slapstick). From v1.3 answer **Yes** to "users can interact" (live races show other players' nicknames; there is no chat).
+**Ads:** Yes (optional rewarded video only — "Watch ad to escape", max once per run, and "2× coins" after a run)  **In-app purchases:** No  **Price:** Free
 **Target audience (Play Console):** 13+ (choosing ages under 13 puts the app under the Families policy and needs child-directed ad settings).
 
 ## Short description (≤80)
@@ -16,6 +16,9 @@ Uh-oh! Beta broke the TV remote right before Papa's cricket match… and now Pap
 Run, jump and slide through colourful Indian galis in this hilarious endless runner. Dodge holy cows, auto-rickshaws,
 sabzi thelas and buses, duck under shaadi banners, and leap over potholes. Trip once and Papa gets closer. Trip twice… PAKDE GAYE!
 
+⚔️ **Muqabla: race live!** – Quick Match against whoever is online, or make a room and send your friends the code. Same street, same time, up to 4 players. Whoever runs furthest wins
+📲 **Challenge friends on WhatsApp** – send your run as a link. Your friend runs the very same street and tries to cross your line. No download needed to try
+🔤 **Shabd Hunt** – collect the letters of the day's desi word (CHAPPAL, JALEBI, SAMOSA…) for coins and a free Rocket Start
 🏃 **Swipe to survive** – left/right to switch lanes, up to jump, down to slide.
 🛡️ **Desi power-ups**
 • Mummy's Shield – Mummy saves you from one hit
@@ -24,7 +27,7 @@ sabzi thelas and buses, duck under shaadi banners, and leap over potholes. Trip 
 • Double Coins
 • Bhaiya Ki Cycle – hop on a bicycle, ride faster and smash through everything in your way
 🎯 **Missions** – finish missions to raise your score multiplier up to x10
-🏅 **Badges & records** – 11 badges to earn (Raat ka Raja, Mandir Darshan, Papa se Tez…) and your lifetime records
+🏅 **Badges & records** – 12 badges to earn (Raat ka Raja, Mandir Darshan, Papa se Tez…) and your lifetime records
 👧 **Beta or Beti** – choose who runs, and who chases: Papa with the chappal, Mummy with the belan, or Dadi with her lathi
 🛒 **Beta Ki Dukaan** – spend coins on characters, caps and school bags
 📅 **Aaj ka Challenge** – a new street every day, the same for everyone: reach the goal for bonus coins and race the ghost of your best try
@@ -41,12 +44,45 @@ sabzi thelas and buses, duck under shaadi banners, and leap over potholes. Trip 
 😡 **Angry Papa** – after 1 km he throws his chappal from afar; dodge close for "Bal bal bache!" bonus coins
 🗣️ **They shout!** – "Ruk ja nalayak!" Papa, Mummy and Dadi yell their taunts out loud in Hindi
 🚲 **Cycle chase** – every 1.5 km Papa grabs a cycle and comes for you: survive it clean for bonus coins
-📴 **Plays fully offline**, small download, smooth on budget phones
-🔒 No forced ads ever — watch one only if you want a second chance. No accounts, no sign-up.
+📴 **Plays offline** (only live races need internet), small download, smooth on budget phones
+🔒 No forced ads ever — watch one only if you want a second chance or double coins. No accounts, no sign-up.
 
 Every Indian kid knows this chase. How far can YOU run before Papa catches you?
 
+## Hindi listing (Play Console → Store listing → Manage translations → add Hindi – hi-IN)
+A Hindi listing makes the game show up for people who search in Hindi. Paste these three fields:
+
+**App name (≤30):** भाग बेटा भाग! - चप्पल रन
+
+**Short description (≤80):** बेटे ने रिमोट तोड़ दिया। पापा के हाथ में चप्पल है। भागो!
+
+**Full description:**
+अरे बाप रे! बेटे ने पापा के क्रिकेट मैच से ठीक पहले टीवी का रिमोट तोड़ दिया… और अब पापा चप्पल लेकर पीछे पड़े हैं! 🩴
+
+भारत की रंग-बिरंगी गलियों में भागो, कूदो और फिसलो। गाय, ऑटो, सब्ज़ी के ठेले और बस से बचो, शादी के बैनर के नीचे से निकलो, गड्ढों के ऊपर से कूदो। एक बार ठोकर लगी तो पापा पास आ जाएँगे। दो बार लगी तो… पकड़े गए!
+
+⚔️ मुक़ाबला: दोस्तों के साथ लाइव रेस! रूम बनाओ, कोड भेजो, या Quick Match में किसी से भी भिड़ो। सब एक ही गली में, एक साथ। जो सबसे दूर भागे, वही जीता
+📲 WhatsApp पर चैलेंज: अपनी दौड़ का लिंक भेजो। दोस्त उसी गली में भागेगा और तुम्हारी लाइन पार करने की कोशिश करेगा
+🔤 शब्द हंट: रोज़ के शब्द (CHAPPAL, JALEBI, SAMOSA…) के अक्षर जमा करो और इनाम पाओ
+🛡️ देसी पावर-अप: मम्मी की शील्ड, दादी का लड्डू मैग्नेट, दूध पावर जंप, भैया की साइकिल, दिवाली रॉकेट
+👧 बेटा या बेटी चुनो, और पीछे कौन आएगा: पापा (चप्पल), मम्मी (बेलन) या दादी (लाठी)
+📅 आज का चैलेंज: रोज़ एक नई गली, सबके लिए एक जैसी
+🌙 दिन से रात, बारिश, तीन मोहल्ले: मार्केट गली, रेलवे कॉलोनी, मंदिर मार्ग
+🗣️ "रुक जा नालायक!" पापा, मम्मी और दादी हिंदी में चिल्लाते हैं
+📴 बिना इंटरनेट के चलता है (सिर्फ़ लाइव रेस के लिए इंटरनेट चाहिए), छोटा डाउनलोड, सस्ते फ़ोन पर भी स्मूद
+🔒 कोई ज़बरदस्ती का विज्ञापन नहीं। कोई अकाउंट नहीं।
+
+हर भारतीय बच्चा यह दौड़ जानता है। पापा के पकड़ने से पहले तुम कितनी दूर भाग सकते हो?
+
 ## Release notes (paste into "What's new")
+v1.3
+• Muqabla: race live! Quick Match, or make a room and send friends the code (up to 4 players)
+• Challenge a friend on WhatsApp: they run your exact street and try to cross your line
+• Shabd Hunt: collect the letters of the day's word for coins and a Rocket Start
+• A checkered line on the road marks your record
+• Double your coins after a run by watching an ad (optional)
+• New badge: Dost ko Haraya
+
 v1.2
 • Play as Beti, and pick your chaser: Papa (chappal), Mummy (belan) or Dadi (lathi)
 • Day turns to night: streetlights switch on, windows and shop signs glow, stars and moon
@@ -71,6 +107,7 @@ v1.1
 - Data is encrypted in transit: **Yes** (SDK uses HTTPS). Users can request deletion: game progress is on-device only (uninstall deletes it).
 - Ads declaration in Play Console: **Contains ads = Yes**.
 - Privacy policy URL: host `privacy.html` (e.g. GitHub Pages) and paste its URL.
+- **v1.3 live races:** the nickname a player types and their position in the race go to the other players in the room through a public relay (wss, so encrypted in transit) and are not stored. Google's form does not count data that is only passed along in real time and never stored as "collected", so no new data type is needed; `privacy.html` describes it. If you ever move the relay to a server that keeps logs or adds accounts, declare *Personal info → Name* and *App activity*.
 
 ## AdMob setup (to earn money)
 1. Create a free account at admob.google.com → *Apps → Add app* (Android, "not published yet" is fine) → copy the **App ID** (`ca-app-pub-…~…`).
@@ -95,3 +132,8 @@ v1.1
 
 ## Web version (optional, free)
 Push the repo to GitHub and enable Pages; the game is a PWA and installs from the browser ("Add to Home screen").
+
+## When the app goes public (production)
+1. Set `STORE_LIVE = true` in `src/config.js` and push: the web game's Install button becomes "Get the app" and opens the Play Store page. Every challenge link a player shares opens the web game first (no install), so this is how web players become app installs.
+2. Link the app in AdMob and check `app-ads.txt` is verified.
+3. Live races run through free public test brokers (`BROKERS` in `src/net.js`). They are fine for a launch, but they promise no uptime. When there are regular players, create a free broker of your own (HiveMQ Cloud or EMQX Serverless free tier) and put its `wss://` address first in `BROKERS`. A private broker needs a username and password, which `mqtt.connect` in `src/net.js` does not send yet (a few lines to add).

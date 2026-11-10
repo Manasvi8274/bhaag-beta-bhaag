@@ -341,6 +341,11 @@ const BUILD = {
     add(g, new THREE.BoxGeometry(0.62, 0.62, 0.12), 0xffd60a, 0, 0.32, 0, { emissive: 0x996600 });
     add(g, new THREE.TorusGeometry(0.1, 0.035, 6, 12), 0xffd60a, 0, 0.72, 0, { emissive: 0x996600 });
   },
+  finish(g) { // the line to beat (your record, a friend's or a rival's run): a checkered board high over the road and a stripe on it
+    for (const x of [-3.3, 3.3]) cyl(g, 0.09, 0.11, 5.8, 0xffd60a, x, 2.9, 0, undefined, 8);
+    for (let i = 0; i < 16; i++) for (let j = 0; j < 2; j++) box(g, 0.4, 0.4, 0.06, (i + j) % 2 ? 0x1b1b1b : 0xffffff, -3 + i * 0.4, 5.2 + j * 0.4, 0);
+    for (let i = 0; i < 12; i++) box(g, 0.5, 0.02, 0.5, i % 2 ? 0x1b1b1b : 0xffffff, -2.75 + i * 0.5, 0.02, 0);
+  },
   coin(g) {
     const m = add(g, new THREE.CylinderGeometry(0.3, 0.3, 0.08, 24), 0xffc300, 0, 0.3, 0,
       { metalness: 0.6, roughness: 0.3, emissive: 0x553300, emissiveIntensity: 1 }); // glows brighter at night
@@ -357,4 +362,25 @@ export function createProp(name) {
   if (!build) throw new Error(`Unknown prop: ${name}`);
   if (!templates.has(name)) { const g = new THREE.Group(); build(g); templates.set(name, mergeStatic(g)); }
   return templates.get(name).clone();
+}
+
+// Shabd Hunt letter: a bright tile showing one letter (unlit material, so it reads at night too). Sized like a power-up.
+const LETTER_GEO = new THREE.BoxGeometry(0.7, 0.7, 0.14), letterMats = new Map();
+export function createLetter(ch) {
+  if (!letterMats.has(ch)) {
+    const c = document.createElement('canvas');
+    c.width = c.height = 64;
+    const x = c.getContext('2d');
+    x.fillStyle = '#1b1b1b'; x.fillRect(0, 0, 64, 64);
+    x.fillStyle = '#ffd60a'; x.fillRect(5, 5, 54, 54);
+    x.fillStyle = '#1b1b1b'; x.font = '800 46px "Baloo 2", "Trebuchet MS", sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillText(ch, 32, 35);
+    const map = new THREE.CanvasTexture(c);
+    map.colorSpace = THREE.SRGBColorSpace;
+    letterMats.set(ch, new THREE.MeshBasicMaterial({ map }));
+  }
+  const g = new THREE.Group(), m = new THREE.Mesh(LETTER_GEO, letterMats.get(ch));
+  m.position.y = 0.4;
+  g.add(m);
+  return g;
 }

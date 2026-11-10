@@ -19,6 +19,7 @@ export function createInput(target, onAction) {
   let startY = null;
 
   const handleKeyDown = (event) => {
+    if (event.target?.tagName === 'INPUT') return; // typing a name or a room code
     const action = keyMap.get(event.key);
     if (action && !event.repeat) {
       event.preventDefault();

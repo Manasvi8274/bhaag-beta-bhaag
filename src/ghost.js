@@ -1,6 +1,6 @@
 // Daily-challenge ghost: your best run today, sampled every GHOST_DT seconds and replayed beside you. Pure.
 export const GHOST_DT = 0.1;
-const MODES = ['run', 'jump', 'slide', 'ride'];
+export const MODES = ['run', 'jump', 'slide', 'ride'];
 
 export const createRecorder = () => ({ next: 0, x: [], y: [], d: [], m: [] });
 

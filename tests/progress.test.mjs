@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createProgress, HEADSTART_COST, SKINS, DAILY_REWARDS, UPGRADE_COST, CHARACTERS, dailyChallenge, CHALLENGE_REWARD, ACHIEVEMENTS } from '../src/progress.js';
+import { createProgress, HEADSTART_COST, SKINS, DAILY_REWARDS, UPGRADE_COST, CHARACTERS, dailyChallenge, CHALLENGE_REWARD, ACHIEVEMENTS, huntWord, HUNT_REWARDS, FRIEND_REWARD } from '../src/progress.js';
 import { createPowerups, activate, updatePowerups, isActive, consume, listActive, mysteryPrize, POWERUP_TIME } from '../src/powerups.js';
 
 const mem = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v) }; };
@@ -145,7 +145,7 @@ test('records and badges: lifetime totals add up across revives, each badge pays
   const now = { distance: 1100, coins: 50, nearMisses: 5, smashes: 0, areas: 2, night: 1, rain: 0 };
   got = p.recordRun(more, false, now);
   assert.deepEqual(got.map((a) => a.id).sort(), ['km', 'near', 'night', 'railway']);
-  assert.deepEqual(p.data.life, { runs: 1, distance: 1100, coins: 50, nearMisses: 5, smashes: 0 });
+  assert.deepEqual(p.data.life, { runs: 1, distance: 1100, coins: 50, nearMisses: 5, smashes: 0, wins: 0 });
   assert.equal(p.data.bestDistance, 1100);
   assert.equal(p.recordRun(now, true, now).length, 0, 'never twice');
   assert.equal(createProgress(s).data.life.runs, 2, 'saved');
@@ -184,4 +184,34 @@ test('Mystery Dabba prizes cover coins, every power-up and a Rocket Start', () =
   assert.deepEqual(new Set(prizes.filter((x) => x.powerup).map((x) => x.powerup)), new Set(Object.keys(POWERUP_TIME)));
   assert.ok(prizes.some((x) => x.headstart));
   assert.equal(listActive((() => { const pu = createPowerups(); activate(pu, 'rocket'); return pu; })())[0].left, POWERUP_TIME.rocket);
+});
+
+test('shabd hunt: letters add up across runs, the last pays, a streak of days pays more', () => {
+  const p = createProgress(mem()), d1 = '2026-11-10', d2 = '2026-11-11', d4 = '2026-11-13';
+  const finish = (day) => { let r; for (let i = p.huntStatus(day).got; i < huntWord(day).length; i++) r = p.huntLetter(day); return r; };
+  assert.deepEqual(p.huntStatus(d1), { word: huntWord(d1), got: 0, done: false });
+  assert.equal(p.huntLetter(d1).reward, 0);
+  assert.equal(p.huntStatus(d1).got, 1);
+  assert.equal(finish(d1).reward, HUNT_REWARDS[0]);
+  assert.equal(p.data.coins, HUNT_REWARDS[0]); assert.equal(p.data.headstarts, 1);
+  assert.equal(p.huntLetter(d1), null, 'done for today');
+  assert.equal(p.huntStatus(d2).got, 0, 'new day, new word');
+  assert.equal(finish(d2).reward, HUNT_REWARDS[1], 'day 2 of a streak');
+  assert.equal(finish(d4).reward, HUNT_REWARDS[0], 'a missed day resets the streak');
+});
+
+test('friend reward is paid once per link; rate prompt waits, backs off, then stops', () => {
+  const p = createProgress(mem());
+  assert.equal(p.beatFriend('abc-100-x'), FRIEND_REWARD);
+  assert.equal(p.beatFriend('abc-100-x'), 0);
+  for (let i = 0; i < 40; i++) p.beatFriend(`k${i}`);
+  assert.equal(p.data.beaten.length, 30);
+  assert.equal(p.rateDue(), false);
+  for (let i = 0; i < 5; i++) p.recordRun({}, true, {});
+  assert.equal(p.rateDue(), true);
+  p.rateAsked(false); assert.equal(p.rateDue(), false);
+  for (let i = 0; i < 15; i++) p.recordRun({}, true, {});
+  assert.equal(p.rateDue(), true);
+  p.rateAsked(true); assert.equal(p.rateDue(), false);
+  assert.ok(p.recordRun({}, true, { friend: 1 }).some((a) => a.id === 'dost'));
 });

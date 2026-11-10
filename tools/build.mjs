@@ -4,4 +4,5 @@ const FILES = ['index.html', 'manifest.webmanifest', 'sw.js', 'privacy.html', 'i
 rmSync('www', { recursive: true, force: true });
 mkdirSync('www');
 for (const f of FILES) cpSync(f, `www/${f}`, { recursive: true });
+cpSync('store/feature-graphic.png', 'www/og.png'); // the link-preview image (og:image in index.html)
 console.log('www/ ready:', FILES.join(', '));

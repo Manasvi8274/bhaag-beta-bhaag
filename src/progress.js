@@ -34,7 +34,13 @@ export const HEADSTART_COST = 300;
 export const DAILY_REWARDS = [50, 75, 100, 150, 200, 300, 500];
 const KEY = 'bbb-save-v1';
 const DEFAULTS = { coins: 0, best: 0, skin: 'classic', owned: ['classic'], muted: false, vibrate: true, voice: true,
-  tutorialDone: false, level: 0, missions: null, lastDaily: null, streak: 0, challengeDone: null, badges: [], bestDistance: 0, hero: 'beta', chaser: 'papa', chars: ['beta', 'papa'], headstarts: 0 };
+  tutorialDone: false, level: 0, missions: null, lastDaily: null, streak: 0, challengeDone: null, badges: [], bestDistance: 0, hero: 'beta', chaser: 'papa', chars: ['beta', 'papa'], headstarts: 0,
+  name: '', beaten: [], rateAt: 5, hunt: null };
+export const FRIEND_REWARD = 100; // for crossing a friend's line, once per challenge link
+// Shabd Hunt: collect the letters of the day's word across your runs. Rewards grow with a streak of days completed.
+export const HUNT_WORDS = ['CHAPPAL', 'LADOO', 'JALEBI', 'SAMOSA', 'BELAN', 'PATANG', 'GULLAK', 'CHAI', 'MITHAI', 'DHOL', 'LATHI', 'TIFFIN', 'PAKORA', 'RICKSHAW'];
+export const HUNT_REWARDS = [200, 300, 400, 500, 750];
+export const huntWord = (date) => HUNT_WORDS[dailyChallenge(date).seed % HUNT_WORDS.length];
 
 function makeMission(level, taken) {
   const tier = Math.floor(level / 3);
@@ -59,8 +65,10 @@ export const ACHIEVEMENTS = [
   { id: 'smash', icon: '🚲', text: 'Cycle Toofan: smash 8 things in one run', reward: 200, ok: (r) => r.smashes >= 8 },
   { id: 'marathon', icon: '🏃', text: 'Marathon: 10 km in total', reward: 300, ok: (r, l) => l.distance >= 10000 },
   { id: 'gullak', icon: '🐷', text: 'Gullak Bhar Gaya: 2000 coins collected in total', reward: 300, ok: (r, l) => l.coins >= 2000 },
+  { id: 'dost', icon: '⚔️', text: "Dost ko Haraya: beat a friend's challenge link", reward: 200, ok: (r) => r.friend >= 1 },
 ];
-const LIFE = ['runs', 'distance', 'coins', 'nearMisses', 'smashes'];
+const LIFE = ['runs', 'distance', 'coins', 'nearMisses', 'smashes', 'wins'];
+export const RACE_REWARD = 150, BOT_REWARD = 50; // for winning a live race, against people or the practice bot
 
 // Aaj ka Challenge: one seeded street per date (same obstacles for everyone that day) and a distance goal.
 export const CHALLENGE_REWARD = 300;
@@ -81,6 +89,8 @@ export function createProgress(storage) {
   d.upgrades = { ...(d.upgrades || {}) };
   d.life = Object.fromEntries(LIFE.map((k) => [k, d.life?.[k] || 0]));
   if (!Array.isArray(d.badges)) d.badges = [];
+  if (!Array.isArray(d.beaten)) d.beaten = [];
+  if (typeof d.name !== 'string') d.name = '';
   if (!Array.isArray(d.missions) || d.missions.length !== 3) {
     d.missions = [];
     for (let i = 0; i < 3; i++) d.missions.push(makeMission(d.level + i, d.missions.map((m) => m.stat)));
@@ -88,8 +98,40 @@ export function createProgress(storage) {
   const save = () => { try { storage?.setItem(KEY, JSON.stringify(d)); } catch { /* storage full or blocked */ } };
 
   const GHOST_KEY = 'bbb-ghost-v1';
+  // Today's hunt: letters reset each day, the streak of completed days carries over.
+  const hunt = (today) => {
+    if (d.hunt?.date !== today) d.hunt = { date: today, got: 0, streak: d.hunt?.streak || 0, last: d.hunt?.last || null };
+    return d.hunt;
+  };
   return {
     get data() { return d; },
+    setName(name) { d.name = name; save(); },
+    // Pays for crossing a friend's line, once per link (key = the link's ?c= value). Returns the coins paid.
+    beatFriend(key) {
+      if (d.beaten.includes(key)) return 0;
+      d.beaten = [...d.beaten.slice(-29), key]; d.coins += FRIEND_REWARD; save();
+      return FRIEND_REWARD;
+    },
+    // "Rate us" is asked after a good run, from run 5; again 15 runs later if put off, never after a yes.
+    raceWon(human) { const n = human ? RACE_REWARD : BOT_REWARD; if (human) d.life.wins += 1; d.coins += n; save(); return n; },
+    rateDue: () => d.life.runs >= d.rateAt,
+    rateAsked(rated) { d.rateAt = rated ? 1e9 : d.life.runs + 15; save(); },
+    huntStatus(today) { const h = hunt(today), word = huntWord(today); return { word, got: h.got, done: h.got >= word.length }; },
+    // Collects the next letter. The last one pays coins and a Rocket Start. Returns null if the word is already done.
+    huntLetter(today) {
+      const h = hunt(today), word = huntWord(today);
+      if (h.got >= word.length) return null;
+      h.got += 1;
+      let reward = 0;
+      if (h.got === word.length) {
+        h.streak = h.last && dayDiff(h.last, today) === 1 ? h.streak + 1 : 1;
+        h.last = today;
+        reward = HUNT_REWARDS[Math.min(h.streak, HUNT_REWARDS.length) - 1];
+        d.coins += reward; d.headstarts += 1;
+      }
+      save();
+      return { word, got: h.got, reward };
+    },
     // The day's best challenge run, replayed as a ghost. Kept apart from the save (it is a few KB) and only for today.
     ghostFor(date) {
       try { const g = JSON.parse(storage?.getItem(GHOST_KEY) || 'null'); return g?.date === date ? g.run : null; } catch { return null; }
