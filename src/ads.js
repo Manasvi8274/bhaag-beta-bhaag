@@ -3,10 +3,14 @@
 // add your phone under AdMob > Settings > Test devices, or set testing: true (Google test ads).
 export const AD_CONFIG = {
   rewardedId: 'ca-app-pub-5362485112066096/2182558124', // "Escape Papa" rewarded unit
+  // The full-screen ad after a live race. Make an *Interstitial* ad unit in AdMob and paste its ID here; while this is
+  // empty no such ad is shown. (A rewarded unit must not be used: Google only allows those when the player opts in.)
+  interstitialId: '',
   testing: false,
 };
 
 const EV = { rewarded: 'onRewardedVideoAdReward', dismissed: 'onRewardedVideoAdDismissed', failedToShow: 'onRewardedVideoAdFailedToShow' };
+const IEV = { dismissed: 'interstitialAdDismissed', failedToShow: 'interstitialAdFailedToShow' };
 
 export function createAds(plugin = globalThis.Capacitor?.Plugins?.AdMob, config = AD_CONFIG) {
   let inited = null, loading = null, ready = false;
@@ -66,7 +70,34 @@ export function createAds(plugin = globalThis.Capacitor?.Plugins?.AdMob, config 
     }
   }
 
-  return { available: !!plugin, preload, showRewarded };
+  // Interstitial: loaded ahead and shown only if it is ready, so the player never waits for an ad.
+  let iReady = false, iLoading = null;
+  function preloadInterstitial() {
+    if (!plugin || !config.interstitialId || iReady) return Promise.resolve();
+    iLoading ??= (async () => {
+      await init();
+      await plugin.prepareInterstitial({ adId: config.interstitialId, isTesting: config.testing, immersiveMode: true });
+      iReady = true;
+    })().catch(() => { iReady = false; }).finally(() => { iLoading = null; });
+    return iLoading;
+  }
+
+  // Resolves true once the ad has been closed, or false at once when none is ready. Never throws.
+  async function showInterstitial() {
+    if (!iReady) { preloadInterstitial(); return false; }
+    iReady = false;
+    await new Promise((resolve) => {
+      let settled = false, handles = [];
+      const finish = () => { if (!settled) { settled = true; handles.forEach((h) => h.remove?.()); resolve(); } };
+      Promise.all([plugin.addListener(IEV.dismissed, finish), plugin.addListener(IEV.failedToShow, finish)])
+        .then((hs) => { handles = hs; if (settled) hs.forEach((h) => h.remove?.()); return plugin.showInterstitial(); })
+        .catch(finish);
+    });
+    preloadInterstitial(); // get the next one ready
+    return true;
+  }
+
+  return { available: !!plugin, preload, showRewarded, preloadInterstitial, showInterstitial };
 }
 
 // Web/PWA rewarded ads via Google H5 Games Ads (AdSense Ad Placement API). Needs the site approved in AdSense
@@ -116,5 +147,13 @@ export function createWebAds(config = WEB_AD_CONFIG, w = globalThis) {
     });
   }
 
-  return { available, preload, showRewarded };
+  // The full-screen ad between games. Resolves when it is over (adBreakDone also fires when no ad was shown).
+  async function showInterstitial() {
+    if (!(await preload())) return false;
+    return new Promise((resolve) => {
+      try { w.adBreak({ type: 'next', name: 'race-end', adBreakDone: () => resolve(true) }); } catch { resolve(false); }
+    });
+  }
+
+  return { available, preload, showRewarded, preloadInterstitial: preload, showInterstitial };
 }

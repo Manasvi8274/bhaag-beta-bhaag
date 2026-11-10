@@ -60,7 +60,7 @@ npm test                        # node:test, no dependencies
 | `src/progress.js` | The save game: coins, shop, missions, badges, records, daily reward, daily challenge. |
 | `src/ui.js` | DOM overlay. Text is set via `textContent` only. |
 | `src/audio.js` | All sound is synthesised with Web Audio: dhol + tumbi music, horns, the train, thunder. No audio files. |
-| `src/ads.js` | Optional rewarded ads (escape Papa, 2× coins): AdMob on Android, H5 Games Ads on the web (off until AdSense approves the site). |
+| `src/ads.js` | Rewarded ads the player chooses (escape Papa, 2× coins) and an interstitial after each live race (needs `interstitialId`): AdMob on Android, H5 Games Ads on the web (off until AdSense approves the site). |
 | `src/share.js` | The score card, the share text, and friend-challenge links (made and parsed here). |
 | `src/net.js` | Live races: a ~40-line MQTT client over WebSocket plus the room and matchmaking rules. It uses free public brokers (`BROKERS`), so there is no server to run. They have no uptime promise and no auth; point `BROKERS` at a broker of your own when players grow. |
 | `src/voice.js` | Hindi text-to-speech shouts (silent where the phone has no Hindi voice). |

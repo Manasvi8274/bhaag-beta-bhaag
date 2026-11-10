@@ -170,7 +170,7 @@ export function startGame(canvas, uiRoot) {
     onStart: () => begin(), onRestart: () => begin(run?.mode), onChallenge: () => begin({ daily: true }), onFriend: () => begin({ friend: friendLink }),
     onPause: pauseGame, onResume: resume, onRevive: () => revive(false), onWatchAd: watchAd, onDoubleCoins: doubleCoins,
     onWhatsApp, onVersus: () => openVersus(), onRematch: rematch,
-    onHome() { if (state === 'paused') finishRun(); leaveNet(); goMenu(); },
+    async onHome() { if (state === 'over') await afterRaceAd(); if (state === 'paused') finishRun(); leaveNet(); goMenu(); },
     onMissions: () => ui.showMissions(progress.data.missions, progress.multiplier(), progress.data, ACHIEVEMENTS),
     onSound() { progress.setSetting('muted', !progress.data.muted); audio.setMuted(progress.data.muted); ui.setSettings(settings()); },
     onVoice() { progress.setSetting('voice', !progress.data.voice); ui.setSettings(settings()); },
@@ -285,6 +285,7 @@ export function startGame(canvas, uiRoot) {
     shout(`${progress.data.hero === 'beti' ? 'बेटी' : 'बेटा'}! रुक जा!`);
     audio.startMusic();
     ads.preload(); // so the "watch ad" revive is instant at game over
+    if (race) ads.preloadInterstitial(); // the ad after a race
   }
 
   function goMenu() {
@@ -447,8 +448,18 @@ export function startGame(canvas, uiRoot) {
       onJoin(name, c) { if (cleanCode(c)) connect(name).join(cleanCode(c)); else ui.toast('Room code 4 letters ka hota hai'); },
     });
   }
-  function rematch() {
+  // One full-screen ad per finished race, on the way out of the result screen (Rematch or Home), never during play.
+  async function afterRaceAd() {
+    if (!run?.race || !run.result || run.adShown) return;
+    run.adShown = true;
+    audio.setMuted(true); // ads play their own sound
+    await ads.showInterstitial();
+    audio.setMuted(progress.data.muted);
+  }
+  async function rematch() {
     if (state !== 'over' || !run.race) return;
+    await afterRaceAd();
+    if (state !== 'over') return; // the host started the next race while the ad was up
     if (run.bot) { begin({ race: true, bot: true }); return; }
     if (!net || run.offline) { leaveNet(); goMenu(); return; }
     net.lobby(); // back to the room: the host starts the next one

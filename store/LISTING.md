@@ -4,7 +4,7 @@
 **Package:** com.bhaagbeta.game
 **Category:** Game → Arcade  **Tags:** Runner, Casual, Multiplayer, Offline
 **Content rating (IARC questionnaire):** cartoon/comic slapstick only (a dad waves a slipper; no injury, no blood). Expect *Everyone / PEGI 7* (slapstick). From v1.3 answer **Yes** to "users can interact" (live races show other players' nicknames; there is no chat).
-**Ads:** Yes (optional rewarded video only — "Watch ad to escape", max once per run, and "2× coins" after a run)  **In-app purchases:** No  **Price:** Free
+**Ads:** Yes (rewarded video the player chooses: "Watch ad to escape", max once per run, and "2× coins" after a run; plus one full-screen ad after each live race once `interstitialId` is set in `src/ads.js`)  **In-app purchases:** No  **Price:** Free
 **Target audience (Play Console):** 13+ (choosing ages under 13 puts the app under the Families policy and needs child-directed ad settings).
 
 ## Short description (≤80)
@@ -45,7 +45,7 @@ sabzi thelas and buses, duck under shaadi banners, and leap over potholes. Trip 
 🗣️ **They shout!** – "Ruk ja nalayak!" Papa, Mummy and Dadi yell their taunts out loud in Hindi
 🚲 **Cycle chase** – every 1.5 km Papa grabs a cycle and comes for you: survive it clean for bonus coins
 📴 **Plays offline** (only live races need internet), small download, smooth on budget phones
-🔒 No forced ads ever — watch one only if you want a second chance or double coins. No accounts, no sign-up.
+🔒 No ads while you run. Solo play has only the ads you choose to watch (a second chance, double coins); a live race ends with one short ad. No accounts, no sign-up.
 
 Every Indian kid knows this chase. How far can YOU run before Papa catches you?
 
@@ -70,7 +70,7 @@ A Hindi listing makes the game show up for people who search in Hindi. Paste the
 🌙 दिन से रात, बारिश, तीन मोहल्ले: मार्केट गली, रेलवे कॉलोनी, मंदिर मार्ग
 🗣️ "रुक जा नालायक!" पापा, मम्मी और दादी हिंदी में चिल्लाते हैं
 📴 बिना इंटरनेट के चलता है (सिर्फ़ लाइव रेस के लिए इंटरनेट चाहिए), छोटा डाउनलोड, सस्ते फ़ोन पर भी स्मूद
-🔒 कोई ज़बरदस्ती का विज्ञापन नहीं। कोई अकाउंट नहीं।
+🔒 दौड़ते समय कोई विज्ञापन नहीं। अकेले खेलने में सिर्फ़ वही विज्ञापन जो आप चुनें; लाइव रेस के बाद एक छोटा विज्ञापन। कोई अकाउंट नहीं।
 
 हर भारतीय बच्चा यह दौड़ जानता है। पापा के पकड़ने से पहले तुम कितनी दूर भाग सकते हो?
 
@@ -80,7 +80,7 @@ v1.3
 • Challenge a friend on WhatsApp: they run your exact street and try to cross your line
 • Shabd Hunt: collect the letters of the day's word for coins and a Rocket Start
 • A checkered line on the road marks your record
-• Double your coins after a run by watching an ad (optional)
+• Double your coins after a run by watching an ad (optional); a short ad after each live race
 • New badge: Dost ko Haraya
 
 v1.2

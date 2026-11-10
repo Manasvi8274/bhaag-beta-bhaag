@@ -61,6 +61,29 @@ test('failures never throw and give no reward', async () => {
   assert.equal(p.calls.show, 0, 'never shows an ad that did not load');
 });
 
+test('interstitial: off without an ad unit ID; with one, shows only when loaded and resolves when closed', async () => {
+  const ls = new Map(), calls = { prepare: 0, show: 0 };
+  const p = {
+    async initialize() {}, async requestConsentInfo() { return { status: 'NOT_REQUIRED' }; },
+    async prepareInterstitial(o) { calls.prepare++; calls.adId = o.adId; },
+    async addListener(e, f) { ls.set(e, f); return { remove: () => ls.delete(e) }; },
+    async showInterstitial() { calls.show++; setTimeout(() => ls.get('interstitialAdDismissed')(), 5); },
+  };
+  const off = createAds(p, { rewardedId: 'r', interstitialId: '' });
+  await off.preloadInterstitial();
+  assert.equal(await off.showInterstitial(), false);
+  assert.deepEqual(calls, { prepare: 0, show: 0 });
+  const on = createAds(p, { rewardedId: 'r', interstitialId: 'unit-1' });
+  assert.equal(await on.showInterstitial(), false, 'not loaded yet: the player is not kept waiting');
+  await on.preloadInterstitial();
+  assert.equal(await on.showInterstitial(), true);
+  assert.equal(calls.show, 1); assert.equal(calls.adId, 'unit-1');
+  assert.equal(ls.size, 0, 'listeners removed');
+  p.showInterstitial = async () => { throw new Error('fail'); };
+  await on.preloadInterstitial();
+  assert.equal(await on.showInterstitial(), true, 'a failed show still lets the player go on');
+});
+
 // Fake page for the web adapter. outcome: 'viewed' | 'dismissed' | 'noFill' | 'blocked'
 function fakePage(outcome) {
   const w = { scripts: [] };
