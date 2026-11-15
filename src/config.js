@@ -1,5 +1,5 @@
 // All tunable game constants. Units: metres, seconds.
-export const VERSION = '1.3';
+export const VERSION = '1.1.0';
 // The Play Store page. Flip STORE_LIVE to true once the app is public (production), not while it is in closed testing:
 // the web game then offers "Get the app" instead of the browser install.
 export const STORE_ID = 'com.bhaagbeta.game', STORE_LIVE = false;

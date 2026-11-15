@@ -75,7 +75,7 @@ A Hindi listing makes the game show up for people who search in Hindi. Paste the
 हर भारतीय बच्चा यह दौड़ जानता है। पापा के पकड़ने से पहले तुम कितनी दूर भाग सकते हो?
 
 ## Release notes (paste into "What's new")
-v1.3
+v1.1.0
 • Muqabla: race live! Quick Match, or make a room and send friends the code (up to 4 players)
 • Challenge a friend on WhatsApp: they run your exact street and try to cross your line
 • Shabd Hunt: collect the letters of the day's word for coins and a Rocket Start
